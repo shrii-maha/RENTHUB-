@@ -1,0 +1,565 @@
+import React, { useState, useEffect } from "react";
+import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { useUser } from "@clerk/clerk-react";
+
+interface AdminPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  listings: any[];
+  onDelete: (id: string) => void;
+}
+
+export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
+  const { user } = useUser();
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts'>('overview');
+  const [stats, setStats] = useState({ totalEarnings: 0, activeListings: 0, activeRents: 0, totalEscrowVolume: 0 });
+  const [pending, setPending] = useState<any[]>([]);
+  const [activity, setActivity] = useState<any[]>([]);
+  const [usersList, setUsersList] = useState<any[]>([]);
+  const [payouts, setPayouts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+  const userEmail = user?.primaryEmailAddress?.emailAddress;
+  const isAdmin = userEmail === adminEmail;
+
+  useEffect(() => {
+    if (isAdmin && isOpen) {
+      fetchAdminData();
+    }
+  }, [isAdmin, isOpen]);
+
+  const fetchAdminData = async () => {
+    try {
+      const [statsRes, pendingRes, activityRes, usersRes, payoutsRes] = await Promise.all([
+        fetch('/api/admin/stats'),
+        fetch('/api/admin/pending'),
+        fetch('/api/admin/activity'),
+        fetch('/api/admin/users'),
+        fetch('/api/admin/payouts')
+      ]);
+      setStats(await statsRes.json());
+      setPending(await pendingRes.json());
+      setActivity(await activityRes.json());
+      setUsersList(await usersRes.json());
+      setPayouts(await payoutsRes.json());
+    } catch (err) {
+      console.error("Failed to load admin data", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
+    try {
+      const res = await fetch(`/api/admin/listings/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        setPending(prev => prev.filter(item => item._id !== id));
+        fetchAdminData(); // Refresh stats and activity logs
+      }
+    } catch (err) {
+      console.error("Failed to update status", err);
+    }
+  };
+  const releasePayout = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${id}/release`, {
+        method: 'PATCH'
+      });
+      if (res.ok) {
+        setPayouts(prev => prev.filter(p => p._id !== id));
+        fetchAdminData();
+      }
+    } catch (err) {
+      console.error("Failed to release payout", err);
+    }
+  };
+
+  const releaseAllPayouts = async () => {
+    try {
+      const res = await fetch(`/api/admin/orders/release-all`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        setPayouts([]);
+        fetchAdminData();
+        alert("✅ All pending batches have been processed and released to bank.");
+      }
+    } catch (err) {
+      console.error("Failed to release all payouts", err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-black/60 backdrop-blur-md"
+        />
+
+        {/* Main Panel */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 30 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 30 }}
+          className="relative w-full max-w-[1400px] h-[95vh] md:h-[90vh] bg-[#f4f4f4] rounded-[2.5rem] overflow-hidden shadow-2xl flex flex-col md:flex-row border border-gray-200"
+        >
+          {/* Close Button Mobile/Global */}
+          <button 
+            onClick={onClose}
+            className="absolute top-6 right-8 p-3 bg-white/50 backdrop-blur-md hover:bg-white border border-gray-200 rounded-2xl z-20 transition-all shadow-sm"
+          >
+            <X className="w-5 h-5 text-black" />
+          </button>
+
+          {!isAdmin ? (
+            // ACCESS DENIED VIEW
+            <div className="flex-1 flex flex-col items-center justify-center bg-white p-12 text-center text-black">
+              <div className="w-24 h-24 bg-red-50 border-8 border-red-500/10 rounded-full flex items-center justify-center mb-8">
+                <Shield className="w-10 h-10 text-red-500" />
+              </div>
+              <h1 className="text-4xl font-display font-bold tracking-tight mb-4">RESTRICTED ZONE.</h1>
+              <p className="text-gray-500 font-medium max-w-sm mx-auto mb-10 leading-relaxed text-sm">
+                This terminal is classified. The credentials associated with <span className="font-bold text-black border-b border-black">{userEmail || 'Guest'}</span> do not have clearance level 5 to access the main grid grid infrastructure.
+              </p>
+              
+              <div className="bg-gray-50 p-6 rounded-2xl border border-gray-200 w-full max-w-md text-left">
+                <label className="text-[10px] uppercase font-bold text-gray-400 tracking-widest block mb-2">Required Credentials</label>
+                <code className="text-sm font-bold text-black bg-white p-3 rounded-xl block border border-gray-200 shadow-sm cursor-text selection:bg-brand-accent">
+                  {adminEmail}
+                </code>
+              </div>
+
+              <button 
+                onClick={onClose}
+                className="mt-10 px-8 py-4 bg-black text-white font-bold rounded-2xl hover:scale-105 transition-all shadow-xl shadow-black/10"
+              >
+                Return to Safe Zone
+              </button>
+            </div>
+          ) : (
+            // ADMIN DASHBOARD
+            <>
+              {/* SIDEBAR */}
+              <div className="w-full md:w-[280px] bg-black p-10 md:px-6 md:py-10 flex flex-col h-full flex-shrink-0">
+                <div className="flex items-center gap-3 mb-16 pl-2">
+                  <div className="bg-brand-accent w-9 h-9 rounded-[10px] flex items-center justify-center shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                    <Shield className="w-5 h-5 text-black" />
+                  </div>
+                  <span className="text-white font-extrabold text-lg tracking-tight">Admin Console</span>
+                </div>
+
+                <nav className="flex flex-col gap-1.5 flex-1">
+                  <SidebarItem 
+                    icon={<LayoutDashboard />} 
+                    label="Overview" 
+                    active={activeTab === 'overview'}
+                    onClick={() => setActiveTab('overview')} 
+                  />
+                  <SidebarItem 
+                    icon={<CheckSquare />} 
+                    label="Approvals" 
+                    badge={pending.length > 0 ? pending.length.toString() : undefined}
+                    active={activeTab === 'approvals'}
+                    onClick={() => setActiveTab('approvals')} 
+                  />
+                  <SidebarItem 
+                    icon={<Users />} 
+                    label="Users" 
+                    active={activeTab === 'users'}
+                    onClick={() => setActiveTab('users')} 
+                  />
+                  <SidebarItem 
+                    icon={<Wallet />} 
+                    label="Payouts" 
+                    active={activeTab === 'payouts'}
+                    onClick={() => setActiveTab('payouts')} 
+                  />
+                </nav>
+
+                <div className="bg-[#111] p-5 rounded-[20px] border border-[#222]">
+                  <div className="text-[10px] text-white/40 uppercase font-extrabold tracking-widest mb-3">Server Status</div>
+                  <div className="flex items-center gap-2 text-green-500 text-xs font-bold">
+                    <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_#10B981] animate-pulse"></div>
+                    Operational
+                  </div>
+                </div>
+              </div>
+
+              {/* MAIN CONTENT AREA */}
+              <div className="flex-1 p-8 md:p-12 lg:p-[50px] bg-white md:rounded-l-[40px] overflow-y-auto min-h-0 shadow-[-20px_0_40px_rgba(0,0,0,0.05)] border-l border-gray-100">
+                {/* OVERVIEW TAB */}
+                {activeTab === 'overview' && (
+                  <>
+                    {/* TOP HEADER */}
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 mr-12 md:mr-0">
+                      <h1 className="text-3xl lg:text-[32px] font-extrabold text-black tracking-tight mb-4 md:mb-0">
+                        Dashboard Overview
+                      </h1>
+                      <button className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-black rounded-xl font-bold text-sm transition-colors cursor-pointer">
+                        Last 30 Days
+                      </button>
+                    </div>
+
+                {/* KPI STATS */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                  <div className="bg-gray-50/50 p-6 lg:p-6 rounded-3xl border border-gray-100">
+                    <div className="text-[11px] text-gray-400 font-extrabold uppercase tracking-widest">Platform Earnings</div>
+                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">₹{stats.totalEarnings.toLocaleString()}</div>
+                    <div className="text-green-500 text-xs font-bold mt-2">↑ Dynamic Feed</div>
+                  </div>
+                  <div className="bg-gray-50/50 p-6 lg:p-6 rounded-3xl border border-gray-100">
+                    <div className="text-[11px] text-gray-400 font-extrabold uppercase tracking-widest">Total Active Listings</div>
+                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">{stats.activeListings}</div>
+                    <div className="text-blue-500 text-xs font-bold mt-2">Live on site</div>
+                  </div>
+                  <div className="bg-gray-50/50 p-6 lg:p-6 rounded-3xl border border-gray-100">
+                    <div className="text-[11px] text-gray-400 font-extrabold uppercase tracking-widest">Active Rents</div>
+                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">{stats.activeRents}</div>
+                    <div className="text-brand-accent text-xs font-bold mt-2">In Progress</div>
+                  </div>
+                </div>
+
+                {/* MAIN GRID */}
+                <div className="grid grid-cols-1 lg:grid-cols-[1.8fr_1fr] gap-8">
+                  
+                  {/* APPROVAL QUEUE */}
+                  <div className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="m-0 text-xl font-extrabold tracking-tight">Pending Approvals ({pending.length})</h3>
+                      <span className="text-xs text-blue-500 font-bold cursor-pointer hover:underline">View All</span>
+                    </div>
+
+                    <div className="flex flex-col gap-4 max-h-[400px] overflow-y-auto pr-2">
+                      {isLoading ? (
+                         <div className="text-sm text-gray-400 mx-auto py-10 font-bold animate-pulse">Scanning database...</div>
+                      ) : pending.length === 0 ? (
+                         <div className="text-sm text-gray-400 mx-auto py-10 font-bold italic">Queue is clear.</div>
+                      ) : pending.map((item, index) => (
+                        <React.Fragment key={item._id}>
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-2 rounded-2xl hover:bg-gray-50 transition-colors">
+                            <div className="flex gap-4 items-center">
+                              <div className="w-14 h-14 bg-gray-100 rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden">
+                                <img src={item.image} alt="" className="w-full h-full object-cover" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-[15px] mb-0.5">{item.title}</div>
+                                <div className="text-xs text-gray-400 font-medium tracking-wide">{item.price} • {item.category}</div>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => updateStatus(item._id, 'approved')} className="px-5 py-2.5 bg-black text-white hover:bg-gray-800 border-none rounded-xl font-bold text-xs cursor-pointer transition-colors shadow-sm">Approve</button>
+                              <button onClick={() => updateStatus(item._id, 'rejected')} className="px-5 py-2.5 bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 rounded-xl font-bold text-xs cursor-pointer transition-colors shadow-sm">Reject</button>
+                            </div>
+                          </div>
+                          {index < pending.length - 1 && <div className="h-px w-full bg-gray-50 my-2" />}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* SYSTEM LOGS */}
+                  <div className="bg-[#050505] border border-[#1a1a1a] rounded-[2rem] p-8 text-white shadow-xl shadow-black/10 flex flex-col relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-accent/5 blur-3xl rounded-full translate-x-10 -translate-y-10" />
+                    
+                    <h3 className="m-0 mb-8 text-xl font-extrabold tracking-tight relative z-10 flex items-center justify-between">
+                      Recent Activity
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-ping" />
+                    </h3>
+                    
+                    <div className="flex flex-col gap-6 relative z-10 max-h-[300px] overflow-y-auto">
+                      {activity.length === 0 ? (
+                        <div className="text-sm text-gray-500 font-bold italic">No recent network activity.</div>
+                      ) : activity.map((log) => (
+                        <div key={log._id} className="flex gap-4 group">
+                          <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                            log.actionType === 'payout' ? 'bg-brand-accent shadow-[0_0_8px_rgba(245,158,11,0.5)]' :
+                            log.actionType === 'rental' ? 'bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                            log.actionType === 'report' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                            'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
+                          }`} />
+                          <div>
+                            <div className={`text-[13px] font-bold text-white mb-1 transition-colors ${
+                              log.actionType === 'payout' ? 'group-hover:text-brand-accent' :
+                              log.actionType === 'rental' ? 'group-hover:text-green-400' :
+                              log.actionType === 'report' ? 'group-hover:text-red-400' :
+                              'group-hover:text-blue-400'
+                            }`}>{log.message}</div>
+                            <div className="text-[11px] text-gray-400 tracking-wide font-medium">{log.details} • {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <button className="mt-auto pt-8 w-full">
+                       <div className="w-full py-3.5 bg-[#141414] hover:bg-[#202020] text-gray-300 rounded-xl text-[12px] font-bold cursor-pointer transition-colors border border-white/5 shadow-inner">
+                         View Audit Logs
+                       </div>
+                    </button>
+                  </div>
+
+                </div>
+                  </>
+                )}
+
+                {/* APPROVALS TAB */}
+                {activeTab === 'approvals' && (
+                  <div className="flex flex-col h-full mr-12 md:mr-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+                      <h2 className="text-3xl lg:text-[32px] font-extrabold text-black tracking-tight mb-4 md:mb-0">Moderation Queue ({pending.length})</h2>
+                      <div className="flex gap-2 w-full md:w-auto">
+                        <input type="text" placeholder="Search listings..." className="w-full md:w-64 px-5 py-3 rounded-xl border border-gray-100 outline-none bg-gray-50 text-sm font-medium focus:border-black transition-colors" />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4">
+                      {isLoading ? (
+                         <div className="text-sm text-gray-400 mx-auto py-10 font-bold animate-pulse">Scanning database...</div>
+                      ) : pending.length === 0 ? (
+                         <div className="text-sm text-gray-400 mx-auto py-10 font-bold italic">Moderation queue is empty and secure.</div>
+                      ) : pending.map((item) => (
+                        <div key={item._id} className="bg-white border border-gray-100 rounded-[24px] p-6 flex flex-col md:flex-row gap-6 items-start md:items-center shadow-sm hover:shadow-md transition-shadow">
+                          <div className="w-28 h-28 bg-gray-100 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
+                            <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex gap-2 mb-2">
+                              <span className="text-[10px] font-extrabold text-brand-accent bg-orange-50 px-3 py-1 rounded-full uppercase tracking-widest">{item.category}</span>
+                              <span className="text-[10px] font-extrabold text-gray-500 bg-gray-100 px-3 py-1 rounded-full uppercase tracking-widest">{item.type}</span>
+                            </div>
+                            <h3 className="m-0 text-[20px] font-bold text-black mb-1">{item.title}</h3>
+                            <p className="text-[13px] text-gray-400 font-medium tracking-wide mb-3">Owner: {item.sellerId} • Posted: {new Date(item.createdAt).toLocaleDateString()}</p>
+                            <div className="font-extrabold text-xl text-black">{item.price} <span className="font-medium text-xs text-gray-400">/ {item.type === 'Rent' ? 'day' : 'total'}</span></div>
+                          </div>
+                          <div className="flex flex-col gap-3 w-full md:w-[200px] shrink-0">
+                            <button onClick={() => updateStatus(item._id, 'approved')} className="w-full py-3.5 bg-black text-white border-none rounded-xl font-bold text-sm cursor-pointer hover:bg-gray-800 transition-all shadow-md active:scale-95">Approve Listing</button>
+                            <button onClick={() => updateStatus(item._id, 'rejected')} className="w-full py-3.5 bg-white border border-red-500/50 text-red-500 rounded-xl font-bold text-sm cursor-pointer hover:bg-red-50 transition-all shadow-sm active:scale-95">Reject / Spam</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* USERS DIRECTORY TAB */}
+                {activeTab === 'users' && (
+                  <div className="flex flex-col h-full mr-12 md:mr-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex justify-between items-center mb-10 flex-col md:flex-row">
+                      <h2 className="text-3xl lg:text-[32px] font-extrabold text-black tracking-tight mb-4 md:mb-0">User Directory</h2>
+                      <div className="flex gap-2 w-full md:w-auto">
+                        <input type="text" placeholder="Search sellers..." className="w-full md:w-64 px-5 py-3 rounded-xl border border-gray-100 outline-none bg-gray-50 text-sm font-medium focus:border-black transition-colors" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white border border-gray-100 rounded-[24px] overflow-hidden shadow-sm">
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-left whitespace-nowrap min-w-[700px]">
+                          <thead>
+                            <tr className="bg-gray-50/80 border-b border-gray-100">
+                              <th className="p-6 text-xs font-extrabold text-gray-400 uppercase tracking-widest">User</th>
+                              <th className="p-6 text-xs font-extrabold text-gray-400 uppercase tracking-widest">Platform Activity</th>
+                              <th className="p-6 text-xs font-extrabold text-gray-400 uppercase tracking-widest">Average Rating</th>
+                              <th className="p-6 text-xs font-extrabold text-gray-400 uppercase tracking-widest text-right">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {isLoading ? (
+                               <tr><td colSpan={4} className="p-10 text-center text-sm font-bold text-gray-400 animate-pulse">Syncing user database...</td></tr>
+                            ) : usersList.length === 0 ? (
+                               <tr><td colSpan={4} className="p-10 text-center text-sm font-bold text-gray-400 italic">No active sellers found.</td></tr>
+                            ) : usersList.map((usr: any, index: number) => (
+                               <tr key={index} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                  <td className="p-6">
+                                      <div className="flex items-center gap-4">
+                                          <div className="w-12 h-12 bg-black text-white rounded-[16px] flex items-center justify-center font-bold text-xl shadow-sm border border-gray-800">
+                                             {usr.email.charAt(0).toUpperCase()}
+                                          </div>
+                                          <div>
+                                              <div className="font-extrabold text-black text-[15px]">{usr.email.split('@')[0].charAt(0).toUpperCase() + usr.email.split('@')[0].slice(1)}</div>
+                                              <div className="text-xs font-medium text-gray-400 mt-0.5 tracking-wide">{usr.email}</div>
+                                          </div>
+                                      </div>
+                                  </td>
+                                  <td className="p-6">
+                                      <div className="text-[14px] font-extrabold text-black mb-1">{usr.totalListings} Listings Posted</div>
+                                      <div className="flex items-center gap-1.5 text-xs font-bold text-green-500 tracking-wide mt-1">
+                                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_#10B981]"></div> Active Seller
+                                      </div>
+                                  </td>
+                                  <td className="p-6 font-extrabold text-brand-accent text-lg drop-shadow-sm">
+                                      ⭐ {usr.avgRating ? usr.avgRating.toFixed(1) : "5.0"}
+                                  </td>
+                                  <td className="p-6 text-right">
+                                      <button className="px-5 py-2.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100 rounded-xl font-bold text-xs cursor-pointer shadow-sm transition-all active:scale-95 text-center inline-block">Suspend</button>
+                                  </td>
+                               </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* PAYOUTS & ESCROW TAB */}
+                {activeTab === 'payouts' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mr-12 md:mr-0">
+                    {/* PAYOUTS HEADER CARD */}
+                    <div className="bg-black text-white p-10 rounded-[2.5rem] mb-10 flex flex-col md:flex-row justify-between items-center shadow-2xl shadow-black/20 relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-64 h-64 bg-brand-accent/10 blur-[100px] -translate-y-1/2 translate-x-1/2 group-hover:bg-brand-accent/20 transition-all duration-700" />
+                      <div className="relative z-10">
+                        <div className="text-[12px] text-white/40 font-extrabold uppercase tracking-[0.3em] mb-4">Total Escrow Volume</div>
+                        <div className="text-5xl font-extrabold tracking-tighter italic">₹{stats.totalEscrowVolume.toLocaleString()}</div>
+                        <div className="flex items-center gap-2 mt-4 text-brand-accent/60 text-xs font-bold uppercase tracking-widest">
+                          <ShieldCheck className="w-4 h-4" />
+                          Secured by RentHub Protocol
+                        </div>
+                      </div>
+                      <button 
+                        onClick={releaseAllPayouts}
+                        disabled={payouts.filter(p => p.status === 'escrow').length === 0}
+                        className="mt-8 md:mt-0 px-10 py-5 bg-brand-accent text-black rounded-2xl font-extrabold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-brand-accent/20 relative z-10 disabled:opacity-50 disabled:grayscale disabled:scale-100"
+                      >
+                        Process All Batches
+                      </button>
+                    </div>
+
+                    <h3 className="text-2xl font-extrabold text-black tracking-tight mb-8">Ready for Payout</h3>
+                    
+                    <div className="flex flex-col gap-4 mb-16">
+                      {isLoading ? (
+                        <div className="text-sm text-gray-400 mx-auto py-10 font-bold animate-pulse">Scanning ledger...</div>
+                      ) : payouts.filter(p => p.status === 'escrow').length === 0 ? (
+                        <div className="bg-gray-50/50 border-2 border-dashed border-gray-100 rounded-[2rem] p-16 text-center">
+                          <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-100">
+                            <Wallet className="w-10 h-10 text-gray-200" />
+                          </div>
+                          <h4 className="text-lg font-bold text-gray-400">Escrow is currently empty.</h4>
+                          <p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-widest">Awaiting new marketplace transactions</p>
+                        </div>
+                      ) : payouts.filter(p => p.status === 'escrow').map((payout) => (
+                        <div key={payout._id} className="bg-white border border-gray-100 rounded-[2rem] p-6 pr-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-lg transition-all group">
+                          <div className="flex items-center gap-6 w-full md:w-auto">
+                            <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center overflow-hidden shrink-0 border border-gray-100 group-hover:rotate-2 transition-transform">
+                              {payout.listingId?.image ? (
+                                <img src={payout.listingId.image} className="w-full h-full object-cover" alt="" />
+                              ) : (
+                                <Landmark className="w-8 h-8 text-gray-300" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-extrabold text-lg text-black mb-1">{payout.buyerId.split('@')[0]}</div>
+                              <div className="text-xs text-gray-400 font-medium tracking-wide">
+                                Reference: <span className="font-bold text-gray-600">RT-{payout._id.slice(-6).toUpperCase()}</span> • {payout.listingId?.title || "Unknown Asset"}
+                              </div>
+                              <div className="flex items-center gap-3 mt-3">
+                                <span className={`text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest ${
+                                  payout.paymentMethod === 'upi' ? 'bg-purple-50 text-purple-500' : 'bg-blue-50 text-blue-500'
+                                }`}>
+                                  {payout.paymentMethod} Payment
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex flex-col md:flex-row items-center gap-10 w-full md:w-auto">
+                            <div className="text-right">
+                              <div className="text-2xl font-extrabold text-black">₹{payout.amount.toLocaleString()}</div>
+                              <div className="text-[10px] text-green-500 font-extrabold uppercase tracking-widest flex items-center justify-end gap-1.5 mt-1">
+                                <div className="w-1 h-1 bg-green-500 rounded-full" />
+                                Released by Renter
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => releasePayout(payout._id)}
+                              className="w-full md:w-auto px-8 py-4 bg-black text-white hover:bg-gray-800 rounded-2xl font-extrabold text-xs transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+                            >
+                              Release to Bank
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <h3 className="text-2xl font-extrabold text-black tracking-tight mb-8 border-t border-gray-100 pt-10">Platform Profit Ledger</h3>
+                    
+                    <div className="flex flex-col gap-4">
+                       {payouts.length === 0 ? (
+                          <div className="text-sm text-gray-400 mx-auto py-10 font-bold italic">No platform profits recorded yet.</div>
+                       ) : payouts.map((order) => {
+                          const basePrice = parseInt(order.listingId?.price?.replace(/[^\d]/g, '')) || 0;
+                          const commPercent = order.listingId?.type === 'Sale' ? 0.05 : 0.15;
+                          const adminCommission = basePrice * commPercent;
+                          const serviceFee = basePrice * 0.05; // Buyer's 5% service fee
+                          const totalProfit = adminCommission + serviceFee;
+                          
+                          return (
+                            <div key={`profit-${order._id}`} className="bg-[#0f0f0f] text-white p-5 rounded-[16px] font-sans flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-[#222]">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-[#222] rounded-[10px] flex items-center justify-center shrink-0 border border-white/5">
+                                        <Wallet className="w-5 h-5 text-gray-300" />
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold tracking-wide">#RH-{order._id.slice(-6).toUpperCase()}</div>
+                                        <div className="text-[11px] text-gray-400 mt-0.5 font-medium tracking-wide">
+                                            Buyer: <span className="text-gray-300">{order.buyerId.split('@')[0]}</span> <span className="mx-1 text-gray-600">→</span> Seller: <span className="text-gray-300">{order.sellerId.split('@')[0]}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="sm:text-right border-t sm:border-none border-white/10 pt-4 sm:pt-0">
+                                    <div className="text-[10px] text-brand-accent font-extrabold uppercase tracking-widest drop-shadow-sm mb-1">Admin Profit</div>
+                                    <div className="text-xl font-black text-green-400 drop-shadow-sm">+ ₹{Math.floor(totalProfit).toLocaleString()}</div>
+                                    <div className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mt-1">(Comm + Service Fee)</div>
+                                </div>
+                            </div>
+                          );
+                       })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </motion.div>
+      </div>
+    </AnimatePresence>
+  );
+}
+
+function SidebarItem({ icon, label, badge, active, onClick }: { icon: React.ReactElement, label: string, badge?: string, active: boolean, onClick: () => void }) {
+  return (
+    <div 
+      onClick={onClick}
+      className={`flex items-center gap-3 px-5 py-3.5 rounded-[16px] font-bold cursor-pointer transition-all ${
+        active 
+          ? 'bg-brand-accent text-black' 
+          : 'text-gray-400 hover:text-white hover:bg-[#111]'
+      }`}
+    >
+      {React.cloneElement(icon, { 
+        className: "w-[18px] h-[18px]", 
+        strokeWidth: 2.5 
+      } as any)}
+      <span className="text-[14px]">{label}</span>
+      {badge && (
+        <span className={`ml-auto text-[10px] px-2 py-0.5 rounded-[10px] font-extrabold shadow-sm ${
+          active ? 'bg-black text-white' : 'bg-red-500 text-white'
+        }`}>
+          {badge}
+        </span>
+      )}
+    </div>
+  );
+}
