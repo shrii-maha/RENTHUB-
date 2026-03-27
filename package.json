@@ -8,8 +8,9 @@
     "server": "npx tsx --watch server/index.ts",
     "dev:all": "start cmd /c npm run server && npm run dev",
     "build": "tsc && vite build",
+    "start": "tsx server/index.ts",
     "preview": "vite preview",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.4",
