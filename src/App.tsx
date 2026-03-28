@@ -84,6 +84,11 @@ export default function App() {
     setActiveSection('items');
   };
 
+  const handleOrderSuccess = (productId: string) => {
+    // Remove the product from the current marketplace listings
+    setListings(prev => prev.filter(item => item.id !== productId));
+  };
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [activeSection]);
@@ -158,6 +163,7 @@ export default function App() {
         isOpen={isCheckoutModalOpen}
         onClose={() => setIsCheckoutModalOpen(false)}
         product={selectedProduct}
+        onOrderSuccess={handleOrderSuccess}
       />
 
       <AddItemModal 

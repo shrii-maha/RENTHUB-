@@ -19,6 +19,7 @@ interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   product: Product | null;
+  onOrderSuccess: (productId: string) => void;
 }
 
 const CheckoutForm = ({ total, onSuccess }: { total: number, onSuccess: () => void }) => {
@@ -223,7 +224,7 @@ const UPIScanner = ({ total, product, onSuccess }: { total: number, product: Pro
   );
 };
 
-export default function CheckoutModal({ isOpen, onClose, product }: CheckoutModalProps) {
+export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess }: CheckoutModalProps) {
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'bank'>('card');
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState("");
@@ -262,6 +263,9 @@ export default function CheckoutModal({ isOpen, onClose, product }: CheckoutModa
   const handleSuccess = async () => {
     const orderId = await handleOrderCreation();
     setCreatedOrderId(orderId);
+    if (product) {
+      onOrderSuccess(product.id);
+    }
     setIsReceiptOpen(true);
   };
 

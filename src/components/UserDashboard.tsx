@@ -20,6 +20,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [orders, setOrders] = useState<any[]>([]);
   const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
+  const [userListings, setUserListings] = useState<Product[]>([]);
   const [receiptData, setReceiptData] = useState<any>(null);
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
@@ -28,23 +29,39 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
 
   useEffect(() => {
     if (isOpen && userEmail && !isAdmin) {
+      // Fetch Seller Payouts/Orders
       fetch(`/api/orders/seller/${userEmail}`)
         .then(res => res.json())
         .then(data => setOrders(Array.isArray(data) ? data : []))
         .catch(console.error);
 
+      // Fetch Buyer Orders
       fetch(`/api/orders/buyer/${userEmail}`)
         .then(res => res.json())
         .then(data => setBuyerOrders(Array.isArray(data) ? data : []))
         .catch(console.error);
+
+      // Fetch Seller's own listings (including sold/rented)
+      if (user?.id) {
+        fetch(`/api/listings/seller/${user.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data)) {
+              setUserListings(data.map((item: any) => ({
+                ...item,
+                id: item._id || item.id
+              })));
+            }
+          })
+          .catch(console.error);
+      }
     }
-  }, [isOpen, userEmail, isAdmin]);
+  }, [isOpen, userEmail, isAdmin, user?.id]);
 
   if (!user || isAdmin) return null;
 
-  // Filter listings by current user
-  const userListings = listings.filter(l => l.sellerId === user.id);
-  const activeRentals = userListings.filter(l => l.type === 'Rent').length;
+  // Remove redundant filter: const userListings = listings.filter(l => l.sellerId === user.id);
+  const activeRentals = userListings.filter(l => l.status === 'rented').length;
   
   // Calculate Real Earnings from Orders
   let availableBalance = 0;
@@ -150,7 +167,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                     </span>
                   </h1>
                   <p className="text-brand-primary/40 text-xs font-medium tracking-wide">
-                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Track your active rentals and secured buys.' : 'Organize and promote your active assets.'}
+                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Track your active rentals and secured buys.' : 'Organize and promote your assets.'}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -168,7 +185,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                 <AnimatePresence mode="wait">
                   {activeTab === 'dashboard' && (
                     <motion.div key="dash" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <StatsRow listingsCount={userListings.length} rentalsCount={activeRentals} earnings={rawEarnings} />
+                      <StatsRow listingsCount={userListings.filter(l => l.status === 'approved').length} rentalsCount={userListings.filter(l => l.status === 'rented').length} earnings={rawEarnings} />
                       <ListingsGrid listings={userListings} />
                     </motion.div>
                   )}
@@ -376,9 +393,15 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start mb-1.5">
                    <span className={`px-2.5 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest ${
-                     item.type === 'Rent' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'
+                     item.status === 'sold' ? 'bg-red-50 text-red-700' :
+                     item.status === 'rented' ? 'bg-blue-50 text-blue-700' :
+                     item.status === 'approved' ? 'bg-green-50 text-green-700' :
+                     'bg-gray-100 text-gray-500'
                    }`}>
-                     {item.type === 'Rent' ? 'Currently Rented' : 'Available'}
+                     {item.status === 'sold' ? 'Sold Out' : 
+                      item.status === 'rented' ? 'Currently Rented' : 
+                      item.status === 'approved' ? 'Active' : 
+                      item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending'}
                    </span>
                    <button className="text-gray-300 hover:text-black transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
                 </div>

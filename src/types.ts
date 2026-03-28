@@ -8,5 +8,6 @@ export interface Product {
   image: string;
   category: string;
   sellerId: string;
+  status?: 'pending' | 'approved' | 'rejected' | 'sold' | 'rented';
   createdAt: string;
 }

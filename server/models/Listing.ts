@@ -9,7 +9,7 @@ export interface IListing extends Document {
   rating: number;
   image: string;
   sellerId: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'sold' | 'rented';
   createdAt: Date;
 }
 
@@ -22,7 +22,7 @@ const ListingSchema = new Schema<IListing>({
   rating: { type: Number, default: 5.0 },
   image: { type: String, required: true },
   sellerId: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'sold', 'rented'], default: 'pending' },
 }, { timestamps: true });
 
 export default mongoose.model<IListing>('Listing', ListingSchema);

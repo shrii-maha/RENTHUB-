@@ -27,6 +27,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   useEffect(() => {
     if (isAdmin && isOpen) {
       fetchAdminData();
+      
+      const interval = setInterval(fetchAdminData, 10000); // Poll every 10s
+      return () => clearInterval(interval);
     }
   }, [isAdmin, isOpen]);
 

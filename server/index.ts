@@ -94,10 +94,11 @@ app.post('/api/create-payment-intent', async (req, res) => {
   }
 });
 
-// GET all active listings
+// GET all active listings (public)
 app.get('/api/listings', async (req, res) => {
   try {
-    const listings = await Listing.find().sort({ createdAt: -1 });
+    // Only return approved listings that are NOT sold or rented
+    const listings = await Listing.find({ status: 'approved' }).sort({ createdAt: -1 });
     res.json(listings);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -147,6 +148,16 @@ app.delete('/api/listings/:id', async (req, res) => {
   }
 });
 
+// GET seller listings (for Dashboard)
+app.get('/api/listings/seller/:id', async (req, res) => {
+  try {
+    const listings = await Listing.find({ sellerId: req.params.id }).sort({ createdAt: -1 });
+    res.json(listings);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── ORDER ROUTES ──────────────────────────────────────────
 
 // CREATE order
@@ -155,10 +166,18 @@ app.post('/api/orders', async (req, res) => {
     const order = new Order(req.body);
     await order.save();
 
+    // UPDATE Listing Status
+    const listing = await Listing.findById(order.listingId);
+    if (listing) {
+      listing.status = listing.type === 'Sale' ? 'sold' : 'rented';
+      await listing.save();
+      console.log(`🏷️ Listing ${listing.title} status updated to ${listing.status}`);
+    }
+
     const activity = new ActivityLog({
       actionType: 'rental',
       message: 'New Transaction',
-      details: `₹${order.amount.toLocaleString()} in escrow for listing ${order.listingId}`
+      details: `₹${order.amount.toLocaleString()} in escrow for listing ${listing ? listing.title : order.listingId}`
     });
     await activity.save();
 
@@ -183,9 +202,10 @@ app.get('/api/admin/stats', async (_req, res) => {
       return sum + (item.type === 'Sale' ? num * 0.05 : num * 0.15);
     }, 0);
     
-    // Consider items without a status field as 'approved' (legacy)
-    const activeListings = listings.filter(l => (l as any).status === 'approved' || !(l as any).status).length;
-    const activeRents = listings.filter(l => ((l as any).status === 'approved' || !(l as any).status) && l.type === 'Rent').length;
+    // Active listings are ONLY those that are approved (and not sold/rented)
+    const activeListings = listings.filter(l => (l as any).status === 'approved').length;
+    // Active rents are ONLY those that are approved AND type'Rent'
+    const activeRents = listings.filter(l => (l as any).status === 'approved' && l.type === 'Rent').length;
 
     // Calculate Escrow Volume
     const escrowOrders = await Order.find({ status: 'escrow' });
