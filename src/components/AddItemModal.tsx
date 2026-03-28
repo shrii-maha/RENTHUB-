@@ -58,11 +58,6 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (uploading) {
-      alert('Please wait for the image upload to complete...');
-      return;
-    }
-
     if (!formData.image && imagePreviews.length === 0) {
       alert('Please upload a product image');
       return;
