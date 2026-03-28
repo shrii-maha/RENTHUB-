@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark } from "lucide-react";
+import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useUser } from "@clerk/clerk-react";
+import EditListingModal from "./EditListingModal";
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -12,13 +13,16 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const { user } = useUser();
-  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts' | 'listings'>('overview');
   const [stats, setStats] = useState({ totalEarnings: 0, activeListings: 0, activeRents: 0, totalEscrowVolume: 0 });
   const [pending, setPending] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
   const [payouts, setPayouts] = useState<any[]>([]);
+  const [allListings, setAllListings] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [editingListing, setEditingListing] = useState<any>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
   const userEmail = user?.primaryEmailAddress?.emailAddress;
@@ -35,18 +39,20 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
   const fetchAdminData = async () => {
     try {
-      const [statsRes, pendingRes, activityRes, usersRes, payoutsRes] = await Promise.all([
+      const [statsRes, pendingRes, activityRes, usersRes, payoutsRes, listingsRes] = await Promise.all([
         fetch('/api/admin/stats'),
         fetch('/api/admin/pending'),
         fetch('/api/admin/activity'),
         fetch('/api/admin/users'),
-        fetch('/api/admin/payouts')
+        fetch('/api/admin/payouts'),
+        fetch('/api/admin/listings')
       ]);
       setStats(await statsRes.json());
       setPending(await pendingRes.json());
       setActivity(await activityRes.json());
       setUsersList(await usersRes.json());
       setPayouts(await payoutsRes.json());
+      setAllListings(await listingsRes.json());
     } catch (err) {
       console.error("Failed to load admin data", err);
     } finally {
@@ -97,6 +103,50 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
       console.error("Failed to release all payouts", err);
     }
   };
+
+  const deleteListing = async (id: string) => {
+    if (!confirm("Are you sure you want to PERMANENTLY delete this listing? This cannot be undone.")) return;
+    try {
+      const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setAllListings(prev => prev.filter(l => l._id !== id));
+        fetchAdminData();
+      }
+    } catch (err) {
+      console.error("Failed to delete listing", err);
+    }
+  };
+
+  const updateListing = async (id: string, updatedData: any) => {
+    try {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData)
+      });
+      if (res.ok) {
+        setAllListings(prev => prev.map(l => l._id === id ? { ...l, ...updatedData } : l));
+        fetchAdminData();
+      }
+    } catch (err) {
+      console.error("Failed to update listing", err);
+    }
+  };
+
+  // Helper for reliable image path resolution
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('data:')) return url;
+    if (url.startsWith('uploads/')) return `/${url}`;
+    return url;
+  };
+
+  const filteredListings = allListings.filter(l => 
+    l.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    l._id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    l.sellerId?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   if (!isOpen) return null;
 
@@ -190,6 +240,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     active={activeTab === 'payouts'}
                     onClick={() => setActiveTab('payouts')} 
                   />
+                  <SidebarItem 
+                    icon={<Package />} 
+                    label="Products" 
+                    badge={allListings.length.toString()}
+                    active={activeTab === 'listings'}
+                    onClick={() => setActiveTab('listings')} 
+                  />
                 </nav>
 
                 <div className="bg-[#111] p-5 rounded-[20px] border border-[#222]">
@@ -255,7 +312,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-2 rounded-2xl hover:bg-gray-50 transition-colors">
                             <div className="flex gap-4 items-center">
                               <div className="w-14 h-14 bg-gray-100 rounded-[14px] flex items-center justify-center shrink-0 overflow-hidden">
-                                <img src={item.image} alt="" className="w-full h-full object-cover" />
+                                <img src={getImageUrl(item.image)} alt="" className="w-full h-full object-cover" />
                               </div>
                               <div>
                                 <div className="font-bold text-[15px] mb-0.5">{item.title}</div>
@@ -335,7 +392,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                       ) : pending.map((item) => (
                         <div key={item._id} className="bg-white border border-gray-100 rounded-[24px] p-6 flex flex-col md:flex-row gap-6 items-start md:items-center shadow-sm hover:shadow-md transition-shadow">
                           <div className="w-28 h-28 bg-gray-100 rounded-2xl flex items-center justify-center overflow-hidden shrink-0">
-                            <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                            <img src={getImageUrl(item.image)} alt={item.title} className="w-full h-full object-cover" />
                           </div>
                           <div className="flex-1">
                             <div className="flex gap-2 mb-2">
@@ -457,7 +514,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                           <div className="flex items-center gap-6 w-full md:w-auto">
                             <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center overflow-hidden shrink-0 border border-gray-100 group-hover:rotate-2 transition-transform">
                               {payout.listingId?.image ? (
-                                <img src={payout.listingId.image} className="w-full h-full object-cover" alt="" />
+                                <img src={getImageUrl(payout.listingId.image)} className="w-full h-full object-cover" alt="" />
                               ) : (
                                 <Landmark className="w-8 h-8 text-gray-300" />
                               )}
@@ -532,10 +589,113 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     </div>
                   </div>
                 )}
+
+                {/* PRODUCT MANAGEMENT TAB */}
+                {activeTab === 'listings' && (
+                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 mr-12 md:mr-0">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
+                      <div>
+                        <h2 className="text-3xl lg:text-[32px] font-extrabold text-black tracking-tight mb-2">Manage Listings</h2>
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{allListings.length} Total Inventory Units</p>
+                      </div>
+                      <div className="relative mt-4 md:mt-0 w-full md:w-auto">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                            type="text" 
+                            placeholder="Find by title, ID or seller..." 
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full md:w-80 pl-11 pr-5 py-3.5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:border-black outline-none transition-all shadow-inner"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm">
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse text-left whitespace-nowrap">
+                          <thead>
+                            <tr className="bg-gray-50/50 border-b border-gray-100">
+                                <th className="p-8 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Asset</th>
+                                <th className="p-8 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Owner / ID</th>
+                                <th className="p-8 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Status</th>
+                                <th className="p-8 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest">Price Point</th>
+                                <th className="p-8 text-[11px] font-extrabold text-gray-400 uppercase tracking-widest text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-50">
+                            {isLoading ? (
+                                <tr><td colSpan={5} className="p-20 text-center text-sm font-bold text-gray-400 animate-pulse uppercase tracking-[0.2em]">Accessing Central Grid Database...</td></tr>
+                            ) : filteredListings.length === 0 ? (
+                                <tr><td colSpan={5} className="p-20 text-center text-sm font-bold text-gray-400 italic">No assets found matching the query.</td></tr>
+                            ) : filteredListings.map((listing) => (
+                                <tr key={listing._id} className="hover:bg-gray-50/50 transition-colors group">
+                                    <td className="p-8">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-16 h-16 bg-gray-100 rounded-2xl overflow-hidden shrink-0 border border-gray-200 group-hover:scale-105 transition-transform duration-500">
+                                                <img src={getImageUrl(listing.image)} alt="" className="w-full h-full object-cover" />
+                                            </div>
+                                            <div>
+                                                <div className="font-extrabold text-black text-base group-hover:text-brand-accent transition-colors">{listing.title}</div>
+                                                <div className="text-[10px] text-gray-400 font-extrabold mt-1 tracking-[0.1em] uppercase">{listing.category}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="p-8">
+                                        <div className="font-bold text-gray-600 text-[13px]">{listing.sellerId?.split('@')[0] || "System"}</div>
+                                        <div className="text-[9px] text-gray-400 mt-0.5 font-mono">#{listing._id.slice(-8).toUpperCase()}</div>
+                                    </td>
+                                    <td className="p-8">
+                                        <span className={`text-[9px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest shadow-sm ${
+                                            listing.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                            listing.status === 'pending' ? 'bg-orange-100 text-orange-700 border border-orange-200' :
+                                            listing.status === 'sold' || listing.status === 'rented' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-red-100 text-red-700'
+                                        }`}>
+                                            {listing.status || 'Draft'}
+                                        </span>
+                                    </td>
+                                    <td className="p-8">
+                                        <div className="font-black text-black tracking-tight text-lg">{listing.price}</div>
+                                        <div className="text-[9px] text-gray-400 font-bold uppercase tracking-widest mt-0.5">{listing.type} Mode</div>
+                                    </td>
+                                    <td className="p-8 text-right">
+                                        <div className="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+                                            <button 
+                                                onClick={() => setEditingListing(listing)}
+                                                className="p-3 bg-white border border-gray-100 text-gray-400 hover:text-black hover:border-black rounded-xl cursor-pointer transition-all shadow-sm active:scale-95"
+                                                title="Edit Metadata"
+                                            >
+                                                <Edit3 className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => deleteListing(listing._id)}
+                                                className="p-3 bg-white border border-gray-100 text-gray-400 hover:text-red-500 hover:border-red-500 rounded-xl cursor-pointer transition-all shadow-sm active:scale-95"
+                                                title="Permanent Removal"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}
         </motion.div>
+        
+        {/* EDIT MODAL */}
+        <EditListingModal 
+            isOpen={!!editingListing} 
+            onClose={() => setEditingListing(null)}
+            listing={editingListing}
+            onUpdate={updateListing}
+        />
       </div>
     </AnimatePresence>
   );

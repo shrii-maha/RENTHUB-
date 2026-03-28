@@ -232,6 +232,16 @@ app.get('/api/admin/stats', async (_req, res) => {
   }
 });
 
+// GET all listings for Admin Management (Live + Sold + Rented)
+app.get('/api/admin/listings', async (_req, res) => {
+  try {
+    const listings = await Listing.find().sort({ createdAt: -1 });
+    res.json(listings);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET all orders for Admin Ledger (Payouts & Revenue)
 app.get('/api/admin/payouts', async (_req, res) => {
   try {
@@ -373,11 +383,21 @@ app.get('/api/admin/users', async (_req, res) => {
   }
 });
 
-// PUT update listing
+// PUT update listing (full metadata edit)
 app.put('/api/listings/:id', async (req, res) => {
   try {
     const listing = await Listing.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
+    
+    // Log Administrative Edit
+    const activity = new ActivityLog({
+      actionType: 'system',
+      message: 'Product Updated',
+      details: `${listing.title} was updated by administrator.`
+    });
+    await activity.save();
+    
+    console.log('📝 Listing updated:', listing.title);
     res.json(listing);
   } catch (err: any) {
     res.status(400).json({ error: err.message });
@@ -457,6 +477,22 @@ app.post('/api/seed', async (_req, res) => {
 
     await Listing.insertMany(defaultListings);
     res.json({ message: `✅ Seeded ${defaultListings.length} listings` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// One-time repair for image paths (Add leading slash to uploads/...)
+app.post('/api/admin/repair-paths', async (_req, res) => {
+  try {
+    const listings = await Listing.find({ image: { $regex: /^uploads\// } });
+    let count = 0;
+    for (const listing of listings) {
+      listing.image = '/' + listing.image;
+      await listing.save();
+      count++;
+    }
+    res.json({ message: `✅ Repaired ${count} listing image paths.` });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
