@@ -2,11 +2,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://renthub-backend-nii6.onrender.com/api/$1"
+      "destination": "https://renthub-backend-ni16.onrender.com/api/$1"
     },
     {
       "source": "/uploads/(.*)",
-      "destination": "https://renthub-backend-nii6.onrender.com/uploads/$1"
+      "destination": "https://renthub-backend-ni16.onrender.com/uploads/$1"
     }
   ]
 }
