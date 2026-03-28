@@ -67,6 +67,20 @@ mongoose.connect(MONGODB_URI)
     process.exit(1);
   });
 
+// ─── DIAGNOSTICS & HEALTH ────────────────────────────
+app.get('/', (_req, res) => {
+  res.send('🚀 RentHub API is Live and Operational.');
+});
+
+app.get('/api/health', (_req, res) => {
+  res.json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
 // ─── ROUTES ────────────────────────────────────────────
 
 // Upload image
