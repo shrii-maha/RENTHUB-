@@ -7,6 +7,8 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
+import { v2 as cloudinary } from 'cloudinary';
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
@@ -32,25 +34,24 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(uploadsDir));
 
-// Multer config for image upload
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadsDir),
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
+// Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'renthub',
+    allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'gif']
+  } as any
 });
 
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (_req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp/;
-    const ext = allowed.test(path.extname(file.originalname).toLowerCase());
-    const mime = allowed.test(file.mimetype);
-    if (ext && mime) return cb(null, true);
-    cb(new Error('Only image files are allowed'));
-  }
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
 });
 
 // Connect to MongoDB
@@ -88,8 +89,8 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No file uploaded' });
   }
-  const imageUrl = `/uploads/${req.file.filename}`;
-  console.log('📸 Image uploaded:', imageUrl);
+  const imageUrl = req.file.path; // Cloudinary returns the full URL directly here
+  console.log('📸 Image uploaded to Cloudinary:', imageUrl);
   res.json({ url: imageUrl });
 });
 
