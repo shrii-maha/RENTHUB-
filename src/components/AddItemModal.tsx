@@ -14,6 +14,8 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -57,7 +59,7 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.image && imagePreviews.length === 0) {
       alert('Please upload a product image');
@@ -73,15 +75,26 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
       createdAt: new Date().toISOString(),
     };
 
-    onAdd(newItem);
-    setIsSubmitted(true);
-    
-    // Pause to show success before resetting/closing
-    setTimeout(() => {
-      onClose();
-      resetForm();
-      setIsSubmitted(false);
-    }, 2500);
+    try {
+      setUploading(true);
+      await onAdd(newItem);
+      setIsSubmitted(true);
+      
+      // Pause to show success before resetting/closing
+      setTimeout(() => {
+        onClose();
+        resetForm();
+        setIsSubmitted(false);
+      }, 2500);
+    } catch (err: any) {
+      setIsError(true);
+      setErrorMessage(err.message || "Something went wrong while saving to database.");
+      
+      // Clear error after 5s
+      setTimeout(() => setIsError(false), 5000);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const resetForm = () => {
@@ -351,6 +364,26 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
                   ))}
                 </div>
 
+                {/* Error Message */}
+                <AnimatePresence>
+                  {isError && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      style={{
+                        marginBottom: 20, padding: 16,
+                        background: '#fef2f2', border: '1px solid #fecaca',
+                        borderRadius: 14, color: '#b91c1c',
+                        fontSize: 13, fontWeight: 600,
+                        display: 'flex', alignItems: 'center', gap: 10,
+                      }}
+                    >
+                      <X size={16} /> {errorMessage}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Submit */}
                 <button
                   type="submit"
@@ -360,14 +393,14 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
                     background: uploading ? '#666' : '#1a1a1a',
                     color: 'white', border: 'none', borderRadius: 50,
                     fontWeight: 700, fontSize: 18,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                    display: 'flex', alignItems: 'center', justifySelf: 'center', gap: 10,
                     boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
                     cursor: uploading ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s',
                   }}
                 >
                   <Check size={20} />
-                  {uploading ? 'Uploading...' : 'Publish Listing'}
+                  {uploading ? 'Processing...' : 'Publish Listing'}
                 </button>
               </form>
               )}

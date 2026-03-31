@@ -134,12 +134,20 @@ app.get('/api/listings/:id', async (req, res) => {
 // POST create listing
 app.post('/api/listings', async (req, res) => {
   try {
-    const listing = new Listing(req.body);
+    console.log('📦 Incoming listing request:', req.body.title);
+    
+    // Remove 'id' if it exists to let Mongoose generate '_id'
+    const listingData = { ...req.body };
+    delete listingData.id;
+
+    const listing = new Listing(listingData);
     await listing.save();
-    console.log('✅ New listing created:', listing.title);
+    
+    console.log('✅ New listing saved to DB:', listing.title, `(${listing._id})`);
     res.status(201).json(listing);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    console.error('❌ Database save failed:', err.message);
+    res.status(400).json({ error: `Database Error: ${err.message}` });
   }
 });
 

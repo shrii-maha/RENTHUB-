@@ -54,18 +54,26 @@ export default function App() {
       });
   }, []);
 
-  const handleAddListing = async (newItem: Product) => {
+  const handleAddListing = async (newItem: Product): Promise<Product> => {
     try {
       const res = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newItem),
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to save listing to database');
+      }
+
       const saved = await res.json();
-      setListings([{ ...saved, id: saved._id || saved.id }, ...listings]);
-    } catch {
-      // Fallback: just add locally
-      setListings([newItem, ...listings]);
+      const mappedItem = { ...saved, id: saved._id || saved.id };
+      setListings(prev => [mappedItem, ...prev]);
+      return mappedItem;
+    } catch (err: any) {
+      console.error('Listing error:', err.message);
+      throw err; // Re-throw to inform the caller (AddItemModal)
     }
   };
 
