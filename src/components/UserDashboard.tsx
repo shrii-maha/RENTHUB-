@@ -260,25 +260,33 @@ function StatCard({ label, value, sub, subColor }: { label: string, value: strin
 
 function EarningsSummary({ balance, pending, totalPaid }: { balance: number, pending: number, totalPaid: number }) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
-      <div className="md:col-span-1.5 bg-brand-primary text-white p-8 rounded-[2.5rem] shadow-2xl shadow-brand-primary/20 relative overflow-hidden group">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl rounded-full" />
-        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/40">Available Balance</span>
-        <div className="text-4xl font-display font-bold mt-4 tracking-tighter italic">₹{balance.toLocaleString()}.00</div>
-        <div className="mt-6 flex items-center gap-2 text-brand-accent text-[10px] font-bold uppercase tracking-widest">
-           <div className="w-1.5 h-1.5 bg-brand-accent rounded-full animate-pulse" />
-           Ready for payout
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="md:col-span-1.5 bg-black text-white p-10 rounded-[2.8rem] shadow-2xl shadow-black/20 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-accent/5 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-brand-accent/10 transition-all duration-700" />
+        <span className="text-[10px] font-extrabold uppercase tracking-[0.4em] text-white/30">Available for Payout</span>
+        <div className="text-5xl font-display font-bold mt-6 tracking-tighter italic">₹{balance.toLocaleString()}.00</div>
+        <div className="mt-8 flex items-center gap-3">
+           <div className="w-2 h-2 bg-brand-accent rounded-full animate-ping" />
+           <span className="text-brand-accent text-[11px] font-bold uppercase tracking-widest">Live Balance</span>
         </div>
       </div>
-      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary/30">Pending</span>
-        <div className="text-2xl font-display font-bold mt-3 text-brand-primary/60 tracking-tight">₹{pending.toLocaleString()}</div>
-        <div className="mt-3 text-[9px] font-bold text-brand-accent uppercase tracking-widest italic">Active Rentals</div>
+      
+      <div className="bg-white p-8 rounded-[2.5rem] border border-gray-50 shadow-sm flex flex-col justify-between">
+        <div>
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.3em] text-gray-400">Escrow / Pending</span>
+          <div className="text-3xl font-display font-bold mt-4 text-black tracking-tight italic">₹{pending.toLocaleString()}</div>
+        </div>
+        <div className="mt-6 text-[9px] font-bold text-brand-accent bg-orange-50 px-3 py-1.5 rounded-full uppercase tracking-widest inline-block w-fit">
+          Secured Funds
+        </div>
       </div>
-      <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-brand-primary/30">Total Withdrawn</span>
-        <div className="text-2xl font-display font-bold mt-3 tracking-tight">₹{totalPaid.toLocaleString()}</div>
-        <div className="mt-3 text-[9px] font-bold text-brand-primary/20 uppercase tracking-widest">Last 12 Months</div>
+
+      <div className="bg-white p-8 rounded-[2.5rem] border border-gray-50 shadow-sm flex flex-col justify-between">
+        <div>
+          <span className="text-[10px] font-extrabold uppercase tracking-[0.3em] text-gray-400">Lifetime Paid</span>
+          <div className="text-3xl font-display font-bold mt-4 text-black tracking-tight italic">₹{totalPaid.toLocaleString()}</div>
+        </div>
+        <div className="mt-6 text-[9px] font-bold text-gray-400 uppercase tracking-widest">Successfully Disbursed</div>
       </div>
     </div>
   );
@@ -287,62 +295,64 @@ function EarningsSummary({ balance, pending, totalPaid }: { balance: number, pen
 function TransactionHistory({ orders }: { orders: any[] }) {
   if (!orders || orders.length === 0) {
     return (
-      <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm p-12 text-center">
-        <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-gray-100">
-          <Wallet className="w-8 h-8 text-gray-300" />
+      <div className="bg-white border md:border-dashed border-gray-100 rounded-[3rem] overflow-hidden p-16 text-center shadow-sm">
+        <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-gray-100">
+          <Wallet className="w-10 h-10 text-gray-200" />
         </div>
-        <h3 className="text-xl font-bold italic text-black mb-1">No transactions yet.</h3>
-        <p className="text-gray-400 text-sm">When someone buys or rents your items, your earnings will appear here.</p>
+        <h3 className="text-2xl font-display font-bold italic text-black mb-2">No Transactions.</h3>
+        <p className="text-gray-400 text-sm max-w-xs mx-auto">Once your items are sold or rented, your payouts will reflect here in real-time.</p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mt-8">
-      {orders.map((order) => {
-        const listing = order.listingId;
-        const title = listing?.title || "Unknown Asset";
-        const type = listing?.type || "Sale";
-        const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
-        const feePercent = type === 'Sale' ? 5 : 15;
-        const platformFee = Math.floor(basePrice * (feePercent / 100));
-        const netPayout = basePrice - platformFee;
-        const isEscrow = order.status === 'escrow';
+    <div className="space-y-4 pt-4">
+      <h3 className="text-xs font-bold uppercase tracking-[0.3em] text-gray-400 mb-6 pl-2">Recent Ledger Activity</h3>
+      <div className="grid grid-cols-1 gap-4">
+        {orders.map((order) => {
+          const listing = order.listingId;
+          const title = listing?.title || "Product Listing";
+          const type = listing?.type || "Sale";
+          const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
+          const feePercent = type === 'Sale' ? 5 : 15;
+          const platformFee = Math.floor(basePrice * (feePercent / 100));
+          const netPayout = basePrice - platformFee;
+          const isEscrow = order.status === 'escrow';
 
-        return (
-          <div key={order._id} className="bg-white p-6 rounded-[20px] border border-gray-100 font-sans shadow-sm hover:shadow-md transition-shadow">
-              <div className="flex justify-between items-start mb-5">
-                  <div>
-                    <h4 className="m-0 text-base font-bold text-black leading-tight">{title}</h4>
-                    <div className="text-[10px] text-gray-400 mt-1 font-medium tracking-wide">Ref: #{order._id.slice(-6).toUpperCase()}</div>
-                  </div>
-                  {isEscrow ? (
-                    <span className="bg-orange-50 text-orange-600 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest shrink-0">PENDING ESCROW</span>
-                  ) : (
-                    <span className="bg-green-50 text-green-600 text-[9px] font-extrabold px-2.5 py-1 rounded-full uppercase tracking-widest shrink-0">RELEASED</span>
-                  )}
-              </div>
+          return (
+            <div key={order._id} className="bg-white p-6 rounded-[2.2rem] border border-gray-50 flex flex-col md:flex-row md:items-center gap-6 group hover:shadow-xl transition-all shadow-sm">
+                <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 border border-gray-100 group-hover:rotate-3 transition-transform overflow-hidden">
+                  {listing?.image ? <img src={listing.image} alt="" className="w-full h-full object-cover" /> : <Box className="w-6 h-6 text-gray-300" />}
+                </div>
+                <div className="flex-1">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="text-[17px] font-bold text-black group-hover:text-brand-accent transition-colors truncate">{title}</h4>
+                      <span className={`text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest ${
+                        isEscrow ? 'bg-orange-50 text-orange-500 border border-orange-100' : 'bg-green-50 text-green-500 border border-green-100'
+                      }`}>
+                        {isEscrow ? 'Held in Escrow' : 'Payment Released'}
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-mono font-bold uppercase tracking-widest flex items-center gap-2">
+                       <span>REF: RT-{order._id.slice(-6).toUpperCase()}</span>
+                       <span className="opacity-20">•</span>
+                       <span>{type} Asset</span>
+                    </div>
+                </div>
 
-              <div className="flex flex-col gap-3 text-sm">
-                  <div className="flex justify-between items-center">
-                      <span className="text-gray-500 font-medium tracking-wide">Gross {type === 'Rent' ? 'Rental' : 'Sale'} Fee</span>
-                      <span className="font-bold text-black">₹{basePrice.toLocaleString()}.00</span>
-                  </div>
-                  <div className="flex justify-between items-center text-red-500">
-                      <span className="font-medium tracking-wide">RentHub Platform Fee ({feePercent}%)</span>
-                      <span className="font-bold">- ₹{platformFee.toLocaleString()}.00</span>
-                  </div>
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-100 font-extrabold text-lg text-black mt-1">
-                      <span>Your Payout</span>
-                      <span>₹{netPayout.toLocaleString()}.00</span>
-                  </div>
-              </div>
-              <p className="text-[11px] text-gray-400 mt-4 font-medium">
-                {isEscrow ? "Funds will be released to your bank 24h after the exchange completes." : "Funds have been successfully transmitted to your connected bank."}
-              </p>
-          </div>
-        );
-      })}
+                <div className="flex items-center gap-10 md:pl-10 md:border-l border-gray-100">
+                    <div className="text-right">
+                       <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-0.5">Net Payout</span>
+                       <div className="text-2xl font-display font-bold italic text-black leading-none">₹{netPayout.toLocaleString()}</div>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-brand-accent transition-colors">
+                       <ChevronRight className="w-5 h-5" />
+                    </div>
+                </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
