@@ -12,7 +12,7 @@ interface UserDashboardProps {
   onOpenSell: () => void;
 }
 
-type Tab = 'dashboard' | 'listings' | 'favorites' | 'earnings';
+type Tab = 'dashboard' | 'listings' | 'purchases' | 'earnings';
 
 export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }: UserDashboardProps) {
   const { user } = useUser();
@@ -128,10 +128,10 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                     onClick={() => handleTabChange('listings')} 
                   />
                   <SidebarItem 
-                    icon={<Heart className="w-5 h-5" />} 
-                    label="My Favorites" 
-                    active={activeTab === 'favorites'} 
-                    onClick={() => handleTabChange('favorites')} 
+                    icon={<ShoppingBag className="w-5 h-5" />} 
+                    label="My Purchases" 
+                    active={activeTab === 'purchases'} 
+                    onClick={() => handleTabChange('purchases')} 
                   />
                   <SidebarItem 
                     icon={<Wallet className="w-5 h-5" />} 
@@ -159,10 +159,10 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
               <div className="p-8 md:p-12 pb-0 flex flex-col md:flex-row justify-between items-start gap-6">
                 <div>
                   <h1 className="text-[34px] font-display font-bold leading-none mb-1 italic tracking-tight text-black">
-                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'favorites' ? 'My Favorites.' : 'Manage Listings.'}
+                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'purchases' ? 'My Purchases.' : 'Manage Listings.'}
                   </h1>
                   <p className="text-brand-primary/40 text-xs font-medium tracking-wide">
-                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'favorites' ? 'Items you saved for later.' : 'Track and manage your marketplace assets.'}
+                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Items you bought or rented.' : 'Track and manage your marketplace assets.'}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -198,8 +198,8 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                     </motion.div>
                   )}
 
-                  {activeTab === 'favorites' && (
-                    <motion.div key="favorites" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                  {activeTab === 'purchases' && (
+                    <motion.div key="purchases" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                       <PurchasesGrid orders={buyerOrders} onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} />
                     </motion.div>
                   )}
