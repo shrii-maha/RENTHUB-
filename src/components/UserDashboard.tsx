@@ -29,11 +29,13 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
 
   useEffect(() => {
     if (isOpen && userEmail && !isAdmin) {
-      // Fetch Seller Payouts/Orders
-      fetch(`/api/orders/seller/${userEmail}`)
-        .then(res => res.json())
-        .then(data => setOrders(Array.isArray(data) ? data : []))
-        .catch(console.error);
+      // Fetch Seller Payouts/Orders using Clerk User ID
+      if (user?.id) {
+        fetch(`/api/orders/seller/${user.id}`)
+          .then(res => res.json())
+          .then(data => setOrders(Array.isArray(data) ? data : []))
+          .catch(console.error);
+      }
 
       // Fetch Buyer Orders
       fetch(`/api/orders/buyer/${userEmail}`)
@@ -241,7 +243,7 @@ function SidebarItem({ icon, label, active, onClick }: { icon: React.ReactNode, 
 function StatsRow({ listingsCount, rentalsCount, earnings }: { listingsCount: number, rentalsCount: number, earnings: number }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-10">
-      <StatCard label="Total Earnings" value={`₹${earnings.toLocaleString()}`} sub="+ ₹2,100 this week" subColor="text-green-500" />
+      <StatCard label="Total Earnings" value={`₹${earnings.toLocaleString()}`} sub="Live Platform Volume" subColor="text-green-500" />
       <StatCard label="Active Items" value={`${listingsCount} Items`} sub={`${rentalsCount} Rented`} subColor="text-blue-500" />
       <StatCard label="Item Views" value="842" sub="Growing Trend!" subColor="text-brand-accent" />
     </div>
