@@ -11,11 +11,12 @@ import Marketplace from "./components/Marketplace";
 import FounderCard from "./components/FounderCard";
 import CheckoutModal from "./components/CheckoutModal";
 import UserDashboard from "./components/UserDashboard";
+import InsurancePolicy from "./components/InsurancePolicy";
 import { motion, useScroll, useSpring } from "motion/react";
 import { Product } from "./types";
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<'home' | 'items'>('home');
+  const [activeSection, setActiveSection] = useState<'home' | 'items' | 'insurance'>('home');
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
@@ -109,7 +110,7 @@ export default function App() {
       />
       
       <main>
-        {activeSection === 'home' ? (
+        {activeSection === 'home' && (
           <>
             <Hero onSearch={handleSearch} />
             <Categories />
@@ -148,16 +149,22 @@ export default function App() {
               </div>
             </section>
           </>
-        ) : (
+        )}
+
+        {activeSection === 'items' && (
           <Marketplace 
             listings={listings} 
             searchFilters={searchFilters} 
             onProductSelect={handleProductSelect}
           />
         )}
+
+        {activeSection === 'insurance' && (
+          <InsurancePolicy />
+        )}
       </main>
 
-      <Footer />
+      <Footer onNavigate={setActiveSection} />
 
       <CheckoutModal
         isOpen={isCheckoutModalOpen}

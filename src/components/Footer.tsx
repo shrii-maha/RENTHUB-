@@ -1,12 +1,16 @@
 import { Instagram, Twitter, Facebook, Youtube, Send } from "lucide-react";
 
-export default function Footer() {
+interface FooterProps {
+  onNavigate?: (section: 'home' | 'items' | 'insurance') => void;
+}
+
+export default function Footer({ onNavigate }: FooterProps) {
   return (
     <footer className="bg-white pt-24 pb-12 px-6 md:px-12 border-t border-brand-primary/5">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-16 mb-24">
           <div className="col-span-1 lg:col-span-1">
-            <div className="flex items-center gap-2 mb-8">
+            <div className="flex items-center gap-2 mb-8 cursor-pointer" onClick={() => onNavigate?.('home')}>
               <div className="w-10 h-10 bg-brand-primary rounded-full flex items-center justify-center text-white font-bold text-xl">R</div>
               <span className="text-2xl font-display font-bold tracking-tighter">RentHub</span>
             </div>
@@ -33,11 +37,11 @@ export default function Footer() {
           <div>
             <h4 className="text-xs font-mono uppercase tracking-[0.3em] text-brand-primary/40 mb-8">Platform</h4>
             <ul className="space-y-4 text-sm font-medium">
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Browse Listings</a></li>
+              <li><button onClick={() => onNavigate?.('items')} className="hover:text-brand-accent transition-colors">Browse Listings</button></li>
               <li><a href="#" className="hover:text-brand-accent transition-colors">List an Item</a></li>
               <li><a href="#" className="hover:text-brand-accent transition-colors">How it Works</a></li>
               <li><a href="#" className="hover:text-brand-accent transition-colors">Safety & Trust</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Insurance Policy</a></li>
+              <li><button onClick={() => onNavigate?.('insurance')} className="hover:text-brand-accent transition-colors text-left">Insurance Policy</button></li>
             </ul>
           </div>
 

@@ -4,8 +4,8 @@ import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/c
 interface NavbarProps {
   onOpenSell: () => void;
   onOpenAdmin: () => void;
-  onNavigate: (section: 'home' | 'items') => void;
-  activeSection: 'home' | 'items';
+  onNavigate: (section: 'home' | 'items' | 'insurance') => void;
+  activeSection: 'home' | 'items' | 'insurance';
   onOpenDashboard: () => void;
 }
 
