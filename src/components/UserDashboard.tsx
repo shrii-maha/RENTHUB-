@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box } from "lucide-react";
+import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2 } from "lucide-react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
@@ -12,7 +12,7 @@ interface UserDashboardProps {
   onOpenSell: () => void;
 }
 
-type Tab = 'dashboard' | 'listings' | 'purchases' | 'earnings';
+type Tab = 'dashboard' | 'listings' | 'favorites' | 'earnings';
 
 export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }: UserDashboardProps) {
   const { user } = useUser();
@@ -109,11 +109,9 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
             {/* SIDEBAR */}
             <div className="w-full md:w-64 bg-black p-6 md:p-10 flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-4 mb-12">
-                  <div className="w-10 h-10 bg-brand-accent rounded-2xl flex items-center justify-center shadow-lg shadow-brand-accent/20">
-                     <div className="w-2 h-2 bg-black rounded-full" />
-                  </div>
-                  <span className="text-white font-display font-bold text-2xl tracking-tighter">My Hub.</span>
+                <div className="flex flex-col mb-12 pl-2">
+                  <span className="text-white font-display font-bold italic text-3xl tracking-tighter">UserHub.</span>
+                  <span className="text-[9px] text-[#FDFDFD]/40 font-mono tracking-[0.20em] uppercase mt-1 font-extrabold">Seller Dashboard</span>
                 </div>
 
                 <nav className="flex flex-col gap-2">
@@ -130,10 +128,10 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                     onClick={() => handleTabChange('listings')} 
                   />
                   <SidebarItem 
-                    icon={<ShoppingBag className="w-5 h-5" />} 
-                    label="My Purchases" 
-                    active={activeTab === 'purchases'} 
-                    onClick={() => handleTabChange('purchases')} 
+                    icon={<Heart className="w-5 h-5" />} 
+                    label="My Favorites" 
+                    active={activeTab === 'favorites'} 
+                    onClick={() => handleTabChange('favorites')} 
                   />
                   <SidebarItem 
                     icon={<Wallet className="w-5 h-5" />} 
@@ -160,22 +158,19 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
               {/* Common Header */}
               <div className="p-8 md:p-12 pb-0 flex flex-col md:flex-row justify-between items-start gap-6">
                 <div>
-                  <h1 className="text-3xl md:text-4xl font-display font-bold leading-none mb-4 italic tracking-tight">
-                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'purchases' ? 'My Purchases.' : 'My Listings.'} <br />
-                    <span className="text-brand-accent underline decoration-brand-accent/30 underline-offset-8">
-                      {activeTab === 'dashboard' ? (user.firstName || 'Member') : ''}
-                    </span>
+                  <h1 className="text-[34px] font-display font-bold leading-none mb-1 italic tracking-tight text-black">
+                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'favorites' ? 'My Favorites.' : 'Manage Listings.'}
                   </h1>
                   <p className="text-brand-primary/40 text-xs font-medium tracking-wide">
-                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Track your active rentals and secured buys.' : 'Organize and promote your assets.'}
+                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'favorites' ? 'Items you saved for later.' : 'Track and manage your marketplace assets.'}
                   </p>
                 </div>
                 <div className="flex gap-4">
-                  <button onClick={onOpenSell} className="px-6 py-3.5 bg-black text-white rounded-2xl font-bold text-sm shadow-xl shadow-black/10 hover:scale-105 transition-all flex items-center gap-3">
+                  <button onClick={onOpenSell} className="px-8 py-3.5 bg-black text-white rounded-2xl font-bold text-sm shadow-xl shadow-black/10 hover:scale-105 transition-all flex items-center gap-3">
                     <Plus className="w-5 h-5" /> New Listing
                   </button>
-                  <button onClick={onClose} className="p-4 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors">
-                    <X className="w-6 h-6" />
+                  <button onClick={onClose} className="p-4 bg-white border border-gray-100 rounded-2xl hover:bg-gray-50 transition-colors shadow-sm">
+                    <X className="w-6 h-6 text-black" />
                   </button>
                 </div>
               </div>
@@ -203,8 +198,8 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                     </motion.div>
                   )}
 
-                  {activeTab === 'purchases' && (
-                    <motion.div key="purchases" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                  {activeTab === 'favorites' && (
+                    <motion.div key="favorites" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                       <PurchasesGrid orders={buyerOrders} onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} />
                     </motion.div>
                   )}
@@ -378,50 +373,36 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
         </div>
       )}
 
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div className="grid grid-cols-1 gap-5">
         {filtered.length === 0 ? (
            <div className="col-span-full py-16 text-center text-gray-400 italic font-medium bg-gray-50 rounded-[2.5rem] border border-dashed border-gray-200">
              No items found matching your filter.
            </div>
         ) : (
           filtered.map((item) => (
-            <div key={item.id} className="bg-white border border-gray-100 rounded-[1.5rem] p-5 flex items-center gap-5 group hover:shadow-xl transition-all shadow-sm">
-              <div className="w-24 h-24 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 relative">
+            <div key={item.id} className="bg-white border border-gray-50 rounded-[1.8rem] p-5 flex items-center gap-6 group hover:shadow-xl transition-all shadow-sm">
+              <div className="w-28 h-20 bg-gray-50 rounded-2xl overflow-hidden flex-shrink-0 relative border border-gray-100 shadow-sm">
                 <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="" />
                 <div className="absolute inset-0 bg-black/5" />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start mb-1.5">
-                   <span className={`px-2.5 py-1 rounded-full text-[8px] font-bold uppercase tracking-widest ${
-                     item.status === 'sold' ? 'bg-red-50 text-red-700' :
-                     item.status === 'rented' ? 'bg-blue-50 text-blue-700' :
-                     item.status === 'approved' ? 'bg-green-50 text-green-700' :
-                     'bg-gray-100 text-gray-500'
-                   }`}>
-                     {item.status === 'sold' ? 'Sold Out' : 
-                      item.status === 'rented' ? 'Currently Rented' : 
-                      item.status === 'approved' ? 'Active' : 
-                      item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Pending'}
-                   </span>
-                   <button className="text-gray-300 hover:text-black transition-colors"><MoreHorizontal className="w-4 h-4" /></button>
+                <h4 className="text-lg font-bold text-black uppercase tracking-tight truncate group-hover:text-brand-accent transition-colors mb-1">{item.title}</h4>
+                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono font-extrabold uppercase tracking-widest">
+                  <span>{item.category}</span>
+                  <span className="opacity-20">•</span>
+                  <span>{item.location}</span>
                 </div>
-                <h4 className="text-base font-bold text-brand-primary truncate group-hover:text-brand-accent transition-colors mb-0.5">{item.title}</h4>
-                <div className="text-[10px] text-brand-primary/40 font-bold mb-3">
-                  {item.type === 'Rent' ? 'Earned: ' : 'Price: '} 
-                  <span className="text-brand-primary">
-                    {item.type === 'Rent' ? `₹${(parseInt(item.price.replace(/[^\d]/g, '')) / 5).toLocaleString()}` : item.price}
-                  </span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="flex-1 py-2 px-3 border border-gray-100 rounded-lg text-[9px] font-bold hover:bg-gray-50 transition-colors uppercase tracking-widest">
-                    {item.type === 'Rent' ? 'Manage' : 'Edit'}
-                  </button>
-                  <button className={`flex-1 py-2 px-3 rounded-lg text-[9px] font-bold transition-all uppercase tracking-widest ${
-                    item.type === 'Rent' ? 'bg-brand-accent text-brand-primary hover:shadow-lg shadow-brand-accent/20' : 'bg-black text-white hover:bg-gray-800'
-                  }`}>
-                    {item.type === 'Rent' ? 'Boost' : 'Promote'}
-                  </button>
-                </div>
+              </div>
+              <div className="flex gap-3">
+                <button className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-black transition-all" title="Promote">
+                  <Rocket className="w-4 h-4" />
+                </button>
+                <button className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-black transition-all" title="Edit">
+                  <Pencil className="w-4 h-4" strokeWidth={2.5}/>
+                </button>
+                <button className="w-10 h-10 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 hover:text-red-500 transition-all border border-red-100" title="Delete">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))
