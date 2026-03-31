@@ -1,7 +1,7 @@
 import { Instagram, Twitter, Facebook, Youtube, Send } from "lucide-react";
 
 interface FooterProps {
-  onNavigate?: (section: 'home' | 'items' | 'insurance') => void;
+  onNavigate?: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy') => void;
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
@@ -48,11 +48,9 @@ export default function Footer({ onNavigate }: FooterProps) {
           <div>
             <h4 className="text-xs font-mono uppercase tracking-[0.3em] text-brand-primary/40 mb-8">Company</h4>
             <ul className="space-y-4 text-sm font-medium">
-              <li><a href="#" className="hover:text-brand-accent transition-colors">About Us</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Careers</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Press</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Contact</a></li>
-              <li><a href="#" className="hover:text-brand-accent transition-colors">Privacy Policy</a></li>
+              <li><button onClick={() => onNavigate?.('about')} className="hover:text-brand-accent transition-colors text-left">About Us</button></li>
+              <li><button onClick={() => onNavigate?.('contact')} className="hover:text-brand-accent transition-colors text-left">Contact</button></li>
+              <li><button onClick={() => onNavigate?.('privacy')} className="hover:text-brand-accent transition-colors text-left">Privacy Policy</button></li>
             </ul>
           </div>
 
