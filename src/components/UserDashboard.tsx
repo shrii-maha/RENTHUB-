@@ -399,10 +399,20 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-lg font-bold text-black uppercase tracking-tight truncate group-hover:text-brand-accent transition-colors mb-1">{item.title}</h4>
-                <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono font-extrabold uppercase tracking-widest">
-                  <span>{item.category}</span>
-                  <span className="opacity-20">•</span>
-                  <span>{item.location}</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-[10px] text-gray-400 font-mono font-extrabold uppercase tracking-widest">
+                    <span>{item.category}</span>
+                    <span className="opacity-20">•</span>
+                    <span>{item.location}</span>
+                  </div>
+                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border transition-all ${
+                    item.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100 shadow-sm shadow-green-500/5' :
+                    item.status === 'pending' || !item.status ? 'bg-orange-50 text-orange-600 border-orange-100 animate-pulse' :
+                    item.status === 'sold' || item.status === 'rented' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                    'bg-gray-50 text-gray-600 border-gray-100'
+                  }`}>
+                    {item.status || 'pending'}
+                  </span>
                 </div>
               </div>
               <div className="flex gap-3">

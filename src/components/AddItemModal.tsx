@@ -13,6 +13,7 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
   const { user } = useUser();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     title: "",
@@ -73,8 +74,14 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     };
 
     onAdd(newItem);
-    onClose();
-    resetForm();
+    setIsSubmitted(true);
+    
+    // Pause to show success before resetting/closing
+    setTimeout(() => {
+      onClose();
+      resetForm();
+      setIsSubmitted(false);
+    }, 2500);
   };
 
   const resetForm = () => {
@@ -120,7 +127,37 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit}>
+              {isSubmitted ? (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  style={{
+                    padding: '60px 20px',
+                    textAlign: 'center',
+                    background: '#f8fafc',
+                    borderRadius: 24,
+                    border: '1px dashed #e2e8f0',
+                  }}
+                >
+                  <div style={{
+                    width: 70, height: 70, background: '#22c55e',
+                    borderRadius: '50%', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', margin: '0 auto 24px',
+                    boxShadow: '0 10px 20px rgba(34, 197, 94, 0.2)',
+                    color: 'white',
+                  }}>
+                    <Check size={32} />
+                  </div>
+                  <h3 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>Listing Submitted!</h3>
+                  <p style={{ color: '#64748b', lineHeight: 1.6, fontSize: 15, maxWidth: 300, margin: '0 auto' }}>
+                    Your item has been safely recorded and is now **pending admin approval** before going live on the marketplace.
+                  </p>
+                  <div style={{ marginTop: 32, fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    Closing in 2 seconds...
+                  </div>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubmit}>
                 {/* Image Upload */}
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -333,6 +370,7 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
                   {uploading ? 'Uploading...' : 'Publish Listing'}
                 </button>
               </form>
+              )}
             </div>
           </motion.div>
         </div>
