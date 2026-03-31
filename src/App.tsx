@@ -62,18 +62,27 @@ export default function App() {
         body: JSON.stringify(newItem),
       });
       
+      const contentType = res.headers.get("content-type");
+      let errorData;
+      
       if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || 'Failed to save listing to database');
+        if (contentType && contentType.includes("application/json")) {
+          errorData = await res.json();
+        }
+        throw new Error(errorData?.error || `Server responded with ${res.status}. Please ensure your backend is running on port 3001.`);
       }
 
-      const saved = await res.json();
-      const mappedItem = { ...saved, id: saved._id || saved.id };
-      setListings(prev => [mappedItem, ...prev]);
-      return mappedItem;
+      if (contentType && contentType.includes("application/json")) {
+        const saved = await res.json();
+        const mappedItem = { ...saved, id: saved._id || saved.id };
+        setListings(prev => [mappedItem, ...prev]);
+        return mappedItem;
+      } else {
+        throw new Error("Invalid response from server. Check your backend terminal (Port 3001).");
+      }
     } catch (err: any) {
       console.error('Listing error:', err.message);
-      throw err; // Re-throw to inform the caller (AddItemModal)
+      throw err;
     }
   };
 
