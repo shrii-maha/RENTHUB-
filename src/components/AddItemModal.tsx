@@ -61,15 +61,25 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.image && imagePreviews.length === 0) {
-      alert('Please upload a product image');
+    
+    if (uploading) {
+      alert('Please wait for the image to finish uploading.');
+      return;
+    }
+
+    if (!formData.image) {
+      alert('Please upload a product image first.');
+      return;
+    }
+
+    // Ensure we aren't sending a base64 preview string to the database
+    if (formData.image.startsWith('data:')) {
+      alert('Image upload is still in progress. Please wait a moment.');
       return;
     }
 
     const newItem = {
       ...formData,
-      image: formData.image || imagePreviews[0] || '',
-      id: Math.random().toString(36).substr(2, 9),
       rating: 5.0,
       sellerId: user?.id || "anonymous",
       createdAt: new Date().toISOString(),
@@ -77,7 +87,11 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
 
     try {
       setUploading(true);
+      setIsError(false);
+      console.log('🚀 Submitting listing...');
+      
       await onAdd(newItem);
+      
       setIsSubmitted(true);
       
       // Pause to show success before resetting/closing
@@ -87,11 +101,9 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
         setIsSubmitted(false);
       }, 2500);
     } catch (err: any) {
+      console.error('❌ Submission failed:', err);
       setIsError(true);
-      setErrorMessage(err.message || "Something went wrong while saving to database.");
-      
-      // Clear error after 5s
-      setTimeout(() => setIsError(false), 5000);
+      setErrorMessage(err.message || "Failed to save listing. Please check your connection.");
     } finally {
       setUploading(false);
     }

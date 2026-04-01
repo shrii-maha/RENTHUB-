@@ -55,13 +55,22 @@ export default function App() {
   }, []);
 
   const handleAddListing = async (newItem: Product): Promise<Product> => {
+    console.log('📡 Fetching /api/listings with:', newItem.title);
+    
+    // Add a 30-second timeout to the request
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch('/api/listings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newItem),
+        signal: controller.signal
       });
       
+      clearTimeout(timeoutId);
+      console.log('📥 Response received. Status:', res.status);
       const contentType = res.headers.get("content-type");
       let errorData;
       
@@ -69,19 +78,22 @@ export default function App() {
         if (contentType && contentType.includes("application/json")) {
           errorData = await res.json();
         }
+        console.error('❌ Server Error:', errorData?.error || res.statusText);
         throw new Error(errorData?.error || `Server responded with ${res.status}. Please ensure your backend is running on port 3001.`);
       }
 
       if (contentType && contentType.includes("application/json")) {
         const saved = await res.json();
+        console.log('✅ Success! Saved ID:', saved._id);
         const mappedItem = { ...saved, id: saved._id || saved.id };
         setListings(prev => [mappedItem, ...prev]);
         return mappedItem;
       } else {
+        console.error('❌ Invalid Content-Type:', contentType);
         throw new Error("Invalid response from server. Check your backend terminal (Port 3001).");
       }
     } catch (err: any) {
-      console.error('Listing error:', err.message);
+      console.error('💥 Listing error:', err.message);
       throw err;
     }
   };

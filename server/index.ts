@@ -9,9 +9,9 @@ import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import Listing from './models/Listing.js';
-import ActivityLog from './models/ActivityLog.js';
-import Order from './models/Order.js';
+import Listing from './models/Listing';
+import ActivityLog from './models/ActivityLog';
+import Order from './models/Order';
 
 dotenv.config();
 
@@ -134,27 +134,34 @@ app.get('/api/listings/:id', async (req, res) => {
 // POST create listing
 app.post('/api/listings', async (req, res) => {
   try {
-    console.log('📦 Incoming listing request:', req.body.title);
+    console.log('📦 Listing Attempt:', req.body.title);
     
     // Remove 'id' if it exists to let Mongoose generate '_id'
     const listingData = { ...req.body };
     delete listingData.id;
 
+    console.log('⏳ Saving Listing to Database...');
     const listing = new Listing(listingData);
     await listing.save();
+    console.log('✅ Listing Saved Successfully:', listing._id);
     
-    // Log new listing to ActivityLog for real-time update in Admin Console
-    const activity = new ActivityLog({
-      actionType: 'system',
-      message: 'New Product Listed',
-      details: `${listing.title} is pending approval from ${listing.sellerId}`
-    });
-    await activity.save();
+    // Log new listing to ActivityLog (Non-blocking preferably, but wrapped in try/catch)
+    try {
+      console.log('⏳ Creating Activity Log...');
+      const activity = new ActivityLog({
+        actionType: 'system',
+        message: 'New Product Listed',
+        details: `${listing.title} is pending approval from ${listing.sellerId}`
+      });
+      await activity.save();
+      console.log('✅ Activity Log Saved.');
+    } catch (logErr: any) {
+      console.warn('⚠️ Activity Log failed (non-critical):', logErr.message);
+    }
     
-    console.log('✅ New listing saved to DB:', listing.title, `(${listing._id})`);
     res.status(201).json(listing);
   } catch (err: any) {
-    console.error('❌ Database save failed:', err.message);
+    console.error('❌ Listing Creation Failed:', err.message);
     res.status(400).json({ error: `Database Error: ${err.message}` });
   }
 });
