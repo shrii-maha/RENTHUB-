@@ -9,9 +9,9 @@ import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
-import Listing from './models/Listing';
-import ActivityLog from './models/ActivityLog';
-import Order from './models/Order';
+import Listing from './models/Listing.js';
+import ActivityLog from './models/ActivityLog.js';
+import Order from './models/Order.js';
 
 dotenv.config();
 
