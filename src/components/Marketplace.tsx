@@ -18,12 +18,13 @@ export default function Marketplace({ listings, searchFilters, onProductSelect }
   };
 
   const filtered = listings.filter(item => {
+    const isApproved = item.status === 'approved' || !item.status; // Support legacy items without status
     const matchesType = activeType === 'All' || item.type === activeType;
     const matchesLocation = !searchFilters?.location ||
       item.location.toLowerCase().includes(searchFilters.location.toLowerCase());
     const matchesCategory = !searchFilters?.category || searchFilters.category === 'All Categories' ||
       item.category.toLowerCase().includes(searchFilters.category.toLowerCase());
-    return matchesType && matchesLocation && matchesCategory;
+    return isApproved && matchesType && matchesLocation && matchesCategory;
   });
 
   return (

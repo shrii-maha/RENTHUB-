@@ -5,6 +5,9 @@ export interface IListing extends Document {
   category: string;
   price: string;
   location: string;
+  condition: string;
+  description: string;
+  securityDeposit?: string;
   type: 'Sale' | 'Rent';
   rating: number;
   image: string;
@@ -18,6 +21,9 @@ const ListingSchema = new Schema<IListing>({
   category: { type: String, required: true },
   price: { type: String, required: true },
   location: { type: String, required: true },
+  condition: { type: String, default: 'New' },
+  description: { type: String, default: '' },
+  securityDeposit: { type: String, default: '' },
   type: { type: String, enum: ['Sale', 'Rent'], required: true },
   rating: { type: Number, default: 5.0 },
   image: { type: String, required: true },

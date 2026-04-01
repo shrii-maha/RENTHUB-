@@ -143,6 +143,14 @@ app.post('/api/listings', async (req, res) => {
     const listing = new Listing(listingData);
     await listing.save();
     
+    // Log new listing to ActivityLog for real-time update in Admin Console
+    const activity = new ActivityLog({
+      actionType: 'system',
+      message: 'New Product Listed',
+      details: `${listing.title} is pending approval from ${listing.sellerId}`
+    });
+    await activity.save();
+    
     console.log('✅ New listing saved to DB:', listing.title, `(${listing._id})`);
     res.status(201).json(listing);
   } catch (err: any) {
