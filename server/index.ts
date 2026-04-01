@@ -58,10 +58,9 @@ const upload = multer({
 });
 
 // Connect to MongoDB
-const MONGODB_URI = process.env.MONGODB_URI;
-if (!MONGODB_URI) {
-  console.error('❌ MONGODB_URI is not defined in .env');
-  process.exit(1);
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/renthub';
+if (!process.env.MONGODB_URI) {
+  console.warn('⚠️ MONGODB_URI is at default (localhost). Ensure local MongoDB is running.');
 }
 
 mongoose.connect(MONGODB_URI)
