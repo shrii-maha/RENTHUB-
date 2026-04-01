@@ -15,7 +15,10 @@ import Order from './models/Order.js';
 
 dotenv.config();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+if (!stripe) {
+  console.warn('⚠️ STRIPE_SECRET_KEY is missing. Payment features will be disabled.');
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
