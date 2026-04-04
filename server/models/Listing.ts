@@ -33,11 +33,10 @@ const ListingSchema = new Schema<IListing>({
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'sold', 'rented'], default: 'pending' },
 }, { timestamps: true });
 
-ListingSchema.pre('save', function(next) {
+ListingSchema.pre('save', function() {
   if (this.images && this.images.length > 0) {
     this.image = this.images[0];
   }
-  next();
 });
 
 const Listing = mongoose.models.Listing || mongoose.model<IListing>('Listing', ListingSchema);
