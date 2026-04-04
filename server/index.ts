@@ -12,7 +12,7 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
-import { GoogleGenerativeAI } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -281,43 +281,46 @@ app.get('/api/admin/stats', async (_req, res) => {
 });
 
 // ─── AI CHAT ASSISTANT ──────────────────────────────────────
-const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY) : null;
+const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }) : null;
 
 app.post('/api/chat', async (req, res) => {
   if (!genAI) {
-    return res.status(500).json({ error: "AI Chat is not configured on the server. Please add GOOGLE_GENAI_API_KEY to your settings." });
+    return res.status(500).json({ error: "AI Chat is not configured. Please add GOOGLE_GENAI_API_KEY to your Render environment variables." });
   }
 
   try {
     const { message, history } = req.body;
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Fetch live marketplace context
     const listings = await Listing.find({ status: 'approved' }).limit(10);
     const marketplaceContext = listings.map(l => `${l.title} (${l.type}) for ${l.price} in ${l.location}`).join(', ');
 
-    const chat = model.startChat({
-      history: history?.map((h: any) => ({
-        role: h.role === 'user' ? 'user' : 'model',
-        parts: [{ text: h.content }],
-      })) || [],
+    // Build conversation history as a single prompt
+    let fullPrompt = `You are "RentHub AI", a premium marketplace assistant.
+Platform: RentHub is a marketplace for buying, selling, and renting premium items.
+Current Live Listings: ${marketplaceContext}.
+Personality: Professional, helpful, and concise. Use **bold** for key terms.
+Goal: Help users find products, explain platform features, give suggestions.
+
+`;
+
+    if (history && history.length > 0) {
+      history.forEach((h: any) => {
+        fullPrompt += `${h.role === 'user' ? 'User' : 'Assistant'}: ${h.content}\n`;
+      });
+    }
+    fullPrompt += `User: ${message}\nAssistant:`;
+
+    const response = await genAI.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: fullPrompt,
     });
 
-    const systemPrompt = `You are "RentHub AI", a premium marketplace assistant. 
-    Platform Context: RentHub is a premium marketplace for high-end rentals and sales (Real Estate, Vehicles, Luxury Watches, etc).
-    Marketplace Context (Featured Items): ${marketplaceContext}.
-    Your Personality: Professional, helpful, and concise. Use bold text for key terms.
-    Goal: Help users find products, explain platform features, and provide suggestions.
-    Rule: If asked about a category not in context, encourage them to browse the full categories section.`;
-
-    const result = await chat.sendMessage(`${systemPrompt}\n\nUser: ${message}`);
-    const response = await result.response;
-    const text = response.text();
-
+    const text = response.text;
     res.json({ text });
   } catch (err: any) {
     console.error('AI Chat Error:', err);
-    res.status(500).json({ error: "I'm experiencing high traffic. Please try again in a moment." });
+    res.status(500).json({ error: "I'm having trouble right now. Please try again in a moment." });
   }
 });
 
