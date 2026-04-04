@@ -32,32 +32,33 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GOOGLE_AI_KEY;
-      if (!apiKey) throw new Error('API key not configured');
+      const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+      if (!apiKey) throw new Error('API key not configured. Add VITE_GROQ_API_KEY to Vercel environment variables.');
 
-      const systemContext = `You are "RentHub AI", a helpful marketplace assistant for RentHub - a platform for buying, selling, and renting premium items like Real Estate, Vehicles, Luxury Watches, Electronics, and Furniture. Be concise, professional, and use **bold** for key terms.`;
+      const systemContext = `You are "RentHub AI", a helpful marketplace assistant for RentHub - a platform for buying, selling, and renting premium items like Real Estate, Vehicles, Luxury Watches, Electronics, and Furniture. Be concise, professional, and helpful.`;
 
-      // Build history for Gemini
-      const historyContents = messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
+      const chatHistory = messages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'assistant',
+        content: m.content
       }));
 
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: systemContext }] },
-            contents: [
-              ...historyContents,
-              { role: 'user', parts: [{ text: userMessage }] }
-            ],
-            generationConfig: { maxOutputTokens: 400 }
-          })
-        }
-      );
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: systemContext },
+            ...chatHistory,
+            { role: 'user', content: userMessage }
+          ],
+          max_tokens: 400,
+          temperature: 0.7
+        })
+      });
 
       if (!res.ok) {
         const errData = await res.json();
@@ -65,11 +66,11 @@ export default function ChatBot() {
       }
 
       const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm not sure. Please try asking again.";
+      const text = data.choices?.[0]?.message?.content || "I'm not sure. Please try asking again.";
       setMessages(prev => [...prev, { role: 'assistant', content: text }]);
     } catch (err: any) {
       console.error('Chat Error:', err);
-      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message || 'Could not connect. Please try again.'}` }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
     } finally {
       setLoading(false);
     }
