@@ -3,7 +3,7 @@ import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2 } from 'lucide-rea
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from '@google/genai';
 
-const GEMINI_API_KEY = 'AIzaSyBaGLbBFBUfy79pdQlszZnDu53D0rPEObs';
+const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_AI_KEY || '';
 const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 interface Message {
