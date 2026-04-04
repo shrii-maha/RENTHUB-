@@ -63,12 +63,14 @@ RentHub was founded by **Srimanta Maharana**, a BSc IT student (graduating 2026)
 - **Accessibility**: Rent anything, anytime, anywhere
 - **Innovation**: Continuously improving with modern tech (MERN Stack, AI, Stripe payments, cloud storage)
 
-## How It Works
+## How It Works & Delivery Process
 1. Sign up / Log in using your Google or Email account (via Clerk)
-2. Browse items in the Marketplace or use Search filters (category, location, dates)
+2. Browse items in the Marketplace or use Search filters
 3. Click on an item to view details and Rent/Buy
-4. Pay securely via Stripe — funds held in Escrow until delivery
-5. Sellers get paid after the transaction is confirmed
+4. **Payment & Escrow**: Pay securely via Stripe. Funds are held in Escrow until you receive the item.
+5. **Delivery Options**: We support Direct Shipping, In-person Pickup, and RentHub Partner Delivery.
+6. **Confirmation**: Once you receive the product, confirm delivery on the RentHub platform.
+7. **Escrow Release**: Only after your confirmation, the funds are released to the seller.
 
 ## Your Role
 Be helpful, warm, and concise. Answer questions about listings, how to sell/rent, platform features, pricing, and the founder.

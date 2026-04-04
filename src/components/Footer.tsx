@@ -1,7 +1,7 @@
 import { Instagram, Twitter, Facebook, Youtube, Send } from "lucide-react";
 
 interface FooterProps {
-  onNavigate?: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy') => void;
+  onNavigate?: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery') => void;
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
@@ -41,6 +41,7 @@ export default function Footer({ onNavigate }: FooterProps) {
               <li><a href="#" className="hover:text-brand-accent transition-colors">List an Item</a></li>
               <li><a href="#" className="hover:text-brand-accent transition-colors">How it Works</a></li>
               <li><a href="#" className="hover:text-brand-accent transition-colors">Safety & Trust</a></li>
+              <li><button onClick={() => onNavigate?.('delivery')} className="hover:text-brand-accent transition-colors text-left">Delivery Policy</button></li>
               <li><button onClick={() => onNavigate?.('insurance')} className="hover:text-brand-accent transition-colors text-left">Insurance Policy</button></li>
             </ul>
           </div>

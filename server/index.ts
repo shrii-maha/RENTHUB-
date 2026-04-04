@@ -251,6 +251,53 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+// SELLER: Mark order as shipped
+app.patch('/api/orders/:id/ship', async (req, res) => {
+  try {
+    const { trackingNumber, shippingNote, deliveryMethod } = req.body;
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (order.status !== 'escrow') return res.status(400).json({ error: 'Order is not in escrow state' });
+
+    order.status = 'shipped';
+    order.trackingNumber = trackingNumber || '';
+    order.shippingNote = shippingNote || '';
+    order.deliveryMethod = deliveryMethod || 'shipping';
+    await order.save();
+
+    console.log(`🚚 Order ${order._id} marked as shipped`);
+    res.json(order);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// BUYER: Confirm delivery → release escrow to seller
+app.patch('/api/orders/:id/confirm-delivery', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+    if (!['escrow', 'shipped'].includes(order.status)) {
+      return res.status(400).json({ error: 'Order cannot be confirmed at this stage' });
+    }
+
+    order.status = 'released';
+    await order.save();
+
+    const activity = new ActivityLog({
+      actionType: 'approval',
+      message: 'Escrow Released',
+      details: `Buyer confirmed delivery — escrow released for order ${order._id}`
+    });
+    await activity.save();
+
+    console.log(`✅ Escrow released for order ${order._id}`);
+    res.json(order);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── ADMIN ROUTES ──────────────────────────────────────
 
 // GET admin stats

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2 } from "lucide-react";
+import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck } from "lucide-react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
@@ -322,7 +322,8 @@ function TransactionHistory({ orders }: { orders: any[] }) {
           const isEscrow = order.status === 'escrow';
 
           return (
-            <div key={order._id} className="bg-white p-6 rounded-[2.2rem] border border-gray-50 flex flex-col md:flex-row md:items-center gap-6 group hover:shadow-xl transition-all shadow-sm">
+            <div key={order._id} className="bg-white p-6 rounded-[2.2rem] border border-gray-50 flex flex-col gap-4 group hover:shadow-xl transition-all shadow-sm">
+              <div className="flex flex-col md:flex-row md:items-center gap-6">
                 <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center shrink-0 border border-gray-100 group-hover:rotate-3 transition-transform overflow-hidden">
                   {listing?.image ? <img src={listing.image} alt="" className="w-full h-full object-cover" /> : <Box className="w-6 h-6 text-gray-300" />}
                 </div>
@@ -330,9 +331,11 @@ function TransactionHistory({ orders }: { orders: any[] }) {
                     <div className="flex justify-between items-start mb-1">
                       <h4 className="text-[17px] font-bold text-black group-hover:text-brand-accent transition-colors truncate">{title}</h4>
                       <span className={`text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest ${
-                        isEscrow ? 'bg-orange-50 text-orange-500 border border-orange-100' : 'bg-green-50 text-green-500 border border-green-100'
+                        order.status === 'escrow' ? 'bg-orange-50 text-orange-500 border border-orange-100' :
+                        order.status === 'shipped' ? 'bg-blue-50 text-blue-500 border border-blue-100' :
+                        'bg-green-50 text-green-500 border border-green-100'
                       }`}>
-                        {isEscrow ? 'Held in Escrow' : 'Payment Released'}
+                        {order.status === 'escrow' ? 'Held in Escrow' : order.status === 'shipped' ? '🚚 Shipped' : '✅ Released'}
                       </span>
                     </div>
                     <div className="text-[10px] text-gray-400 font-mono font-bold uppercase tracking-widest flex items-center gap-2">
@@ -341,16 +344,25 @@ function TransactionHistory({ orders }: { orders: any[] }) {
                        <span>{type} Asset</span>
                     </div>
                 </div>
-
                 <div className="flex items-center gap-10 md:pl-10 md:border-l border-gray-100">
                     <div className="text-right">
                        <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-0.5">Net Payout</span>
                        <div className="text-2xl font-display font-bold italic text-black leading-none">₹{netPayout.toLocaleString()}</div>
                     </div>
-                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-300 group-hover:text-brand-accent transition-colors">
-                       <ChevronRight className="w-5 h-5" />
-                    </div>
                 </div>
+              </div>
+              {/* SELLER ACTION: Mark as Shipped */}
+              {order.status === 'escrow' && (
+                <ShipOrderPanel orderId={order._id} onShipped={() => {
+                  setOrders(prev => prev.map(o => o._id === order._id ? { ...o, status: 'shipped' } : o));
+                }} />
+              )}
+              {order.status === 'shipped' && (
+                <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-4 py-2 rounded-xl">
+                  <Truck className="w-4 h-4" />
+                  <span>Shipped{order.trackingNumber ? ` — Tracking: ${order.trackingNumber}` : ''}. Waiting for buyer to confirm delivery.</span>
+                </div>
+              )}
             </div>
           );
         })}
@@ -435,7 +447,7 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
   );
 }
 
-function PurchasesGrid({ orders, onViewSource }: { orders: any[], onViewSource: (order: any) => void }) {
+function PurchasesGrid({ orders, setBuyerOrders }: { orders: any[], setBuyerOrders: React.Dispatch<React.SetStateAction<any[]>> }) {
   if (!orders || orders.length === 0) {
     return (
       <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm p-12 text-center mt-8">
@@ -454,10 +466,10 @@ function PurchasesGrid({ orders, onViewSource }: { orders: any[], onViewSource: 
         const listing = order.listingId;
         const title = listing?.title || "Unknown Asset";
         const type = listing?.type || "Sale";
-        const isEscrow = order.status === 'escrow';
 
         return (
-          <div key={order._id} className="bg-white p-5 rounded-[20px] border border-gray-100 font-sans shadow-sm hover:shadow-md transition-shadow flex items-center gap-5">
+          <div key={order._id} className="bg-white p-5 rounded-[20px] border border-gray-100 font-sans shadow-sm hover:shadow-md transition-shadow flex flex-col gap-4">
+            <div className="flex items-center gap-5">
               <div className="w-20 h-20 bg-gray-50 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-200">
                 {listing?.image ? (
                   <img src={listing.image} alt={title} className="w-full h-full object-cover" />
@@ -468,30 +480,101 @@ function PurchasesGrid({ orders, onViewSource }: { orders: any[], onViewSource: 
               <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <h4 className="m-0 text-base font-bold text-black leading-tight truncate">{title}</h4>
-                    {isEscrow ? (
-                      <span className="bg-orange-50 text-orange-600 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-widest shrink-0">Processing</span>
-                    ) : (
-                      <span className="bg-green-50 text-green-600 text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-widest shrink-0">Secured</span>
-                    )}
+                    <span className={`text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-widest shrink-0 ${
+                      order.status === 'escrow' ? 'bg-orange-50 text-orange-600' :
+                      order.status === 'shipped' ? 'bg-blue-50 text-blue-600' :
+                      order.status === 'released' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'
+                    }`}>
+                      {order.status === 'escrow' ? '⏳ Payment Secured' : order.status === 'shipped' ? '🚚 On the Way' : '✅ Delivered'}
+                    </span>
                   </div>
-                  <div className="text-[10px] text-gray-400 font-medium tracking-wide mb-3">Ref: #{order._id.slice(-6).toUpperCase()} • {type}</div>
-                  
-                  <div className="flex justify-between items-end border-t border-gray-50 pt-3">
-                      <div>
-                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest block mb-0.5">Total Paid</span>
-                        <span className="font-bold text-black">₹{order.amount.toLocaleString()}.00</span>
-                      </div>
-                      <button 
-                        onClick={() => onViewSource(order)}
-                        className="text-[10px] font-bold bg-black text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition-colors uppercase tracking-widest flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                      >
-                         <CheckCircle2 className="w-3 h-3" /> View Source
-                      </button>
-                  </div>
+                  <div className="text-[10px] text-gray-400 font-medium tracking-wide mb-1">Ref: #{order._id.slice(-6).toUpperCase()} • {type}</div>
+                  <div className="font-bold text-black text-sm">₹{order.amount.toLocaleString()}.00</div>
               </div>
+            </div>
+            {/* Tracking info if shipped */}
+            {order.status === 'shipped' && order.trackingNumber && (
+              <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-4 py-2 rounded-xl">
+                <Truck className="w-4 h-4 shrink-0" />
+                <span>Tracking: <strong>{order.trackingNumber}</strong>{order.shippingNote ? ` — ${order.shippingNote}` : ''}</span>
+              </div>
+            )}
+            {/* BUYER ACTION: Confirm Delivery */}
+            {(order.status === 'shipped' || order.status === 'escrow') && (
+              <ConfirmDeliveryButton orderId={order._id} onConfirmed={() => {
+                setBuyerOrders(prev => prev.map(o => o._id === order._id ? { ...o, status: 'released' } : o));
+              }} />
+            )}
+            {order.status === 'released' && (
+              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-4 py-2 rounded-xl">
+                <PackageCheck className="w-4 h-4" />
+                <span>Delivery confirmed. Payment released to seller.</span>
+              </div>
+            )}
           </div>
         );
       })}
     </div>
+  );
+}
+
+// ─── SELLER: Ship Order Panel ─────────────────────────────
+function ShipOrderPanel({ orderId, onShipped }: { orderId: string; onShipped: () => void }) {
+  const [trackingNumber, setTrackingNumber] = React.useState('');
+  const [note, setNote] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [open, setOpen] = React.useState(false);
+
+  const handleShip = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/ship`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trackingNumber, shippingNote: note, deliveryMethod: 'shipping' })
+      });
+      if (res.ok) { onShipped(); setOpen(false); }
+    } finally { setLoading(false); }
+  };
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)} className="flex items-center gap-2 text-xs font-bold bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors">
+      <Truck className="w-4 h-4" /> Mark as Shipped
+    </button>
+  );
+
+  return (
+    <div className="flex flex-col gap-2 bg-blue-50 p-4 rounded-xl">
+      <p className="text-xs font-bold text-blue-800">Enter shipping details:</p>
+      <input className="text-sm border border-blue-200 rounded-lg px-3 py-2 outline-none bg-white" placeholder="Tracking Number (optional)" value={trackingNumber} onChange={e => setTrackingNumber(e.target.value)} />
+      <input className="text-sm border border-blue-200 rounded-lg px-3 py-2 outline-none bg-white" placeholder="Note for buyer (e.g. via Delhivery)" value={note} onChange={e => setNote(e.target.value)} />
+      <div className="flex gap-2">
+        <button onClick={handleShip} disabled={loading} className="flex-1 text-xs font-bold bg-blue-600 text-white px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors disabled:opacity-50">
+          {loading ? 'Sending...' : 'Confirm Shipment'}
+        </button>
+        <button onClick={() => setOpen(false)} className="text-xs text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100">Cancel</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── BUYER: Confirm Delivery Button ────────────────────────
+function ConfirmDeliveryButton({ orderId, onConfirmed }: { orderId: string; onConfirmed: () => void }) {
+  const [loading, setLoading] = React.useState(false);
+
+  const handleConfirm = async () => {
+    if (!window.confirm('Confirm you have received the item? This will release the payment to the seller.')) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/confirm-delivery`, { method: 'PATCH' });
+      if (res.ok) { onConfirmed(); }
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <button onClick={handleConfirm} disabled={loading} className="flex items-center gap-2 text-xs font-bold bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition-colors disabled:opacity-50">
+      <PackageCheck className="w-4 h-4" />
+      {loading ? 'Confirming...' : 'I Received It - Release Payment'}
+    </button>
   );
 }
