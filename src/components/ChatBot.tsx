@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { GoogleGenAI } from '@google/genai';
+
+const GEMINI_API_KEY = 'AIzaSyBaGLbBFBUfy79pdQlszZnDu53D0rPEObs';
+const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 interface Message {
   role: 'user' | 'assistant';
@@ -32,27 +36,28 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: userMessage,
-          history: messages.map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            content: m.content
-          }))
-        })
+      // Build conversation history as prompt
+      let fullPrompt = `You are "RentHub AI", a premium marketplace assistant.
+Platform: RentHub is a marketplace for buying, selling, and renting premium items (Real Estate, Vehicles, Luxury Watches, Electronics, Furniture, and more).
+Personality: Professional, helpful, and concise. Use **bold** for key terms.
+Goal: Help users find products, understand how renting/buying works, and navigate the platform.
+
+`;
+      messages.forEach(m => {
+        fullPrompt += `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}\n`;
+      });
+      fullPrompt += `User: ${userMessage}\nAssistant:`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-1.5-flash',
+        contents: fullPrompt,
       });
 
-      const data = await res.json();
-      if (data.text) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.text }]);
-      } else {
-        throw new Error(data.error || 'Failed to get response');
-      }
-    } catch (err) {
+      const text = response.text;
+      setMessages(prev => [...prev, { role: 'assistant', content: text || "I'm not sure about that. Try asking something else!" }]);
+    } catch (err: any) {
       console.error('Chat Error:', err);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I'm sorry, I encountered an error. Please try again later." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting. Please try again in a moment." }]);
     } finally {
       setLoading(false);
     }
