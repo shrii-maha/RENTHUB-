@@ -43,45 +43,53 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     }
 
     setUploading(true);
-    
+
     for (const file of filesToUpload) {
-      // Local preview
+      // Show local preview immediately
       const reader = new FileReader();
       const previewPromise = new Promise<string>((resolve) => {
         reader.onload = (ev) => resolve(ev.target?.result as string);
       });
       reader.readAsDataURL(file);
       const previewUrl = await previewPromise;
-      
-      // Temporarily add preview
       setImagePreviews(prev => [...prev, previewUrl]);
 
-      // Upload to server
+      // Upload directly to Cloudinary from the browser (no backend needed)
       try {
         const fd = new FormData();
-        fd.append('image', file);
-        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        fd.append('file', file);
+        fd.append('upload_preset', 'renthub_upload'); // unsigned preset name
+        fd.append('cloud_name', 'dsidmkehq');
+
+        const res = await fetch(
+          `https://api.cloudinary.com/v1_1/dsidmkehq/image/upload`,
+          { method: 'POST', body: fd }
+        );
+
+        if (!res.ok) {
+          throw new Error(`Cloudinary responded with ${res.status}`);
+        }
+
         const data = await res.json();
-        if (data.url) {
+        if (data.secure_url) {
           setFormData(prev => {
-            const nextImages = [...prev.images, data.url];
-            return { 
-              ...prev, 
+            const nextImages = [...prev.images, data.secure_url];
+            return {
+              ...prev,
               images: nextImages,
-              image: nextImages[0]
+              image: nextImages[0],
             };
           });
         } else {
-          // Upload responded but maybe with an error
-          throw new Error('Server did not return a URL');
+          throw new Error('No URL returned from Cloudinary');
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error('Upload failed:', err);
-        // Remove the preview if upload failed
         setImagePreviews(prev => prev.filter(p => p !== previewUrl));
-        alert('One or more images failed to upload. Please check your connection and try again.');
+        alert(`Upload failed: ${err.message}. Please ensure your Cloudinary upload preset "renthub_upload" is set to Unsigned.`);
       }
     }
+
     setUploading(false);
   };
 
