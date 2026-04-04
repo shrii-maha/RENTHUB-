@@ -86,14 +86,30 @@ app.get('/api/health', (_req, res) => {
 
 // ─── ROUTES ────────────────────────────────────────────
 
-// Upload image
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'No file uploaded' });
-  }
-  const imageUrl = req.file.path; // Cloudinary returns the full URL directly here
-  console.log('📸 Image uploaded to Cloudinary:', imageUrl);
-  res.json({ url: imageUrl });
+// Upload image with robust error handling
+app.post('/api/upload', (req, res) => {
+  upload.single('image')(req, res, (err) => {
+    if (err) {
+      console.error('❌ Upload Middleware Error:', err);
+      // Handle Multer errors (file size limits, etc)
+      if (err instanceof multer.MulterError) {
+        return res.status(400).json({ error: `Upload error: ${err.message}` });
+      }
+      // Handle Cloudinary configuration or connection errors
+      return res.status(500).json({ 
+        error: "Cloudinary storage failed. Please ensure CLOUDINARY_ environment variables are correctly set in the dashboard.",
+        details: err.message 
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file selected for upload.' });
+    }
+
+    const imageUrl = req.file.path;
+    console.log('📸 Asset synced to Cloudinary:', imageUrl);
+    res.json({ url: imageUrl });
+  });
 });
 
 // Create Stripe Payment Intent
