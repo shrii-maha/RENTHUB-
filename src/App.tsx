@@ -15,6 +15,7 @@ import InsurancePolicy from "./components/InsurancePolicy";
 import AboutUs from "./components/AboutUs";
 import Contact from "./components/Contact";
 import PrivacyPolicy from "./components/PrivacyPolicy";
+import ChatBot from "./components/ChatBot";
 import { motion, useScroll, useSpring } from "motion/react";
 import { Product } from "./types";
 
@@ -239,6 +240,8 @@ export default function App() {
           setIsSellModalOpen(true);
         }}
       />
+
+      <ChatBot />
     </div>
   );
 }
