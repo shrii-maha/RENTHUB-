@@ -1,10 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { GoogleGenAI } from '@google/genai';
-
-const GEMINI_API_KEY = import.meta.env.VITE_GOOGLE_AI_KEY || '';
-const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 interface Message {
   role: 'user' | 'assistant';
@@ -36,28 +32,44 @@ export default function ChatBot() {
     setLoading(true);
 
     try {
-      // Build conversation history as prompt
-      let fullPrompt = `You are "RentHub AI", a premium marketplace assistant.
-Platform: RentHub is a marketplace for buying, selling, and renting premium items (Real Estate, Vehicles, Luxury Watches, Electronics, Furniture, and more).
-Personality: Professional, helpful, and concise. Use **bold** for key terms.
-Goal: Help users find products, understand how renting/buying works, and navigate the platform.
+      const apiKey = import.meta.env.VITE_GOOGLE_AI_KEY;
+      if (!apiKey) throw new Error('API key not configured');
 
-`;
-      messages.forEach(m => {
-        fullPrompt += `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}\n`;
-      });
-      fullPrompt += `User: ${userMessage}\nAssistant:`;
+      const systemContext = `You are "RentHub AI", a helpful marketplace assistant for RentHub - a platform for buying, selling, and renting premium items like Real Estate, Vehicles, Luxury Watches, Electronics, and Furniture. Be concise, professional, and use **bold** for key terms.`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-1.5-flash',
-        contents: fullPrompt,
-      });
+      // Build history for Gemini
+      const historyContents = messages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'model',
+        parts: [{ text: m.content }]
+      }));
 
-      const text = response.text;
-      setMessages(prev => [...prev, { role: 'assistant', content: text || "I'm not sure about that. Try asking something else!" }]);
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemContext }] },
+            contents: [
+              ...historyContents,
+              { role: 'user', parts: [{ text: userMessage }] }
+            ],
+            generationConfig: { maxOutputTokens: 400 }
+          })
+        }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData?.error?.message || `API error ${res.status}`);
+      }
+
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm not sure. Please try asking again.";
+      setMessages(prev => [...prev, { role: 'assistant', content: text }]);
     } catch (err: any) {
       console.error('Chat Error:', err);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting. Please try again in a moment." }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message || 'Could not connect. Please try again.'}` }]);
     } finally {
       setLoading(false);
     }
