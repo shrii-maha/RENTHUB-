@@ -144,6 +144,12 @@ app.post('/api/listings', async (req, res) => {
 
     console.log('⏳ Saving Listing to Database...');
     const listing = new Listing(listingData);
+    
+    // Ensure legacy 'image' field is set if 'images' array exists
+    if (listing.images && listing.images.length > 0 && !listing.image) {
+      listing.image = listing.images[0];
+    }
+    
     await listing.save();
     console.log('✅ Listing Saved Successfully:', listing._id);
     

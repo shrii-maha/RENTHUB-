@@ -405,12 +405,13 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
                     <span className="opacity-20">•</span>
                     <span>{item.location}</span>
                   </div>
-                  <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest border transition-all ${
-                    item.status === 'approved' ? 'bg-green-50 text-green-600 border-green-100 shadow-sm shadow-green-500/5' :
-                    item.status === 'pending' || !item.status ? 'bg-orange-50 text-orange-600 border-orange-100 animate-pulse' :
-                    item.status === 'sold' || item.status === 'rented' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                    'bg-gray-50 text-gray-600 border-gray-100'
+                  <span className={`flex items-center gap-1.5 text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest border transition-all shadow-sm ${
+                    item.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                    item.status === 'pending' || !item.status ? 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse' :
+                    item.status === 'sold' || item.status === 'rented' ? 'bg-indigo-50 text-indigo-700 border-indigo-200' :
+                    'bg-rose-50 text-rose-700 border-rose-200'
                   }`}>
+                    {item.status === 'approved' ? <ShieldCheck className="w-3 h-3" /> : (item.status === 'pending' || !item.status) ? <Clock className="w-3 h-3" /> : <Box className="w-3 h-3" />}
                     {item.status || 'pending'}
                   </span>
                 </div>

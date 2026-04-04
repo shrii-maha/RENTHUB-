@@ -10,7 +10,8 @@ export interface IListing extends Document {
   securityDeposit?: string;
   type: 'Sale' | 'Rent';
   rating: number;
-  image: string;
+  image?: string;
+  images: string[];
   sellerId: string;
   status: 'pending' | 'approved' | 'rejected' | 'sold' | 'rented';
   createdAt: Date;
@@ -26,9 +27,18 @@ const ListingSchema = new Schema<IListing>({
   securityDeposit: { type: String, default: '' },
   type: { type: String, enum: ['Sale', 'Rent'], required: true },
   rating: { type: Number, default: 5.0 },
-  image: { type: String, required: true },
+  image: { type: String },
+  images: { type: [String], default: [] },
   sellerId: { type: String, required: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'sold', 'rented'], default: 'pending' },
 }, { timestamps: true });
 
-export default mongoose.model<IListing>('Listing', ListingSchema);
+ListingSchema.pre('save', function(next) {
+  if (this.images && this.images.length > 0) {
+    this.image = this.images[0];
+  }
+  next();
+});
+
+const Listing = mongoose.models.Listing || mongoose.model<IListing>('Listing', ListingSchema);
+export default Listing;

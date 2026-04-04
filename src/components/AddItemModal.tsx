@@ -27,36 +27,66 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     description: "",
     type: "Sale",
     image: "",
+    images: [] as string[],
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const file = files[0];
+    const remainingSlots = 5 - formData.images.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImagePreviews(prev => [...prev, ev.target?.result as string].slice(0, 5));
-    };
-    reader.readAsDataURL(file);
-
-    // Upload to server
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.url) {
-        setFormData(prev => ({ ...prev, image: data.url }));
-      }
-    } catch (err) {
-      console.error('Upload failed:', err);
-    } finally {
-      setUploading(false);
+    if (filesToUpload.length === 0) {
+      alert("Maximum 5 images allowed.");
+      return;
     }
+
+    setUploading(true);
+    
+    for (const file of filesToUpload) {
+      // Show preview
+      const reader = new FileReader();
+      const previewPromise = new Promise<string>((resolve) => {
+        reader.onload = (ev) => resolve(ev.target?.result as string);
+      });
+      reader.readAsDataURL(file);
+      const previewUrl = await previewPromise;
+      setImagePreviews(prev => [...prev, previewUrl]);
+
+      // Upload to server
+      try {
+        const fd = new FormData();
+        fd.append('image', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.url) {
+          setFormData(prev => {
+            const nextImages = [...prev.images, data.url];
+            return { 
+              ...prev, 
+              images: nextImages,
+              image: nextImages[0]
+            };
+          });
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+      }
+    }
+    setUploading(false);
+  };
+
+  const removeImage = (index: number) => {
+    setImagePreviews(prev => prev.filter((_, i) => i !== index));
+    setFormData(prev => {
+      const nextImages = prev.images.filter((_, i) => i !== index);
+      return { 
+        ...prev, 
+        images: nextImages,
+        image: nextImages.length > 0 ? nextImages[0] : "" 
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -67,8 +97,8 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
       return;
     }
 
-    if (!formData.image) {
-      alert('Please upload a product image first.');
+    if (!formData.images || formData.images.length === 0) {
+      alert('Please upload at least one product image first.');
       return;
     }
 
@@ -112,7 +142,7 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
   const resetForm = () => {
     setFormData({
       title: "", category: "General Items", price: "", condition: "New",
-      location: "", securityDeposit: "", description: "", type: "Sale", image: "",
+      location: "", securityDeposit: "", description: "", type: "Sale", image: "", images: [],
     });
     setImagePreviews([]);
   };
@@ -174,11 +204,32 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
                     <Check size={32} />
                   </div>
                   <h3 style={{ fontSize: 24, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>Listing Submitted!</h3>
-                  <p style={{ color: '#64748b', lineHeight: 1.6, fontSize: 15, maxWidth: 300, margin: '0 auto' }}>
+                  <p style={{ color: '#64748b', lineHeight: 1.6, fontSize: 15, maxWidth: 300, margin: '0 auto', marginBottom: 32 }}>
                     Your item has been safely recorded and is now **pending admin approval** before going live on the marketplace.
                   </p>
-                  <div style={{ marginTop: 32, fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                    Closing in 2 seconds...
+                  <button
+                    onClick={() => {
+                        onClose();
+                        resetForm();
+                        setIsSubmitted(false);
+                    }}
+                    style={{
+                        padding: '16px 40px',
+                        background: '#22c55e',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: 50,
+                        fontWeight: 700,
+                        fontSize: 16,
+                        cursor: 'pointer',
+                        boxShadow: '0 10px 20px rgba(34, 197, 94, 0.2)',
+                        transition: 'all 0.2s',
+                    }}
+                  >
+                    Done
+                  </button>
+                  <div style={{ marginTop: 24, fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                    Auto-closing shortly...
                   </div>
                 </motion.div>
               ) : (
@@ -221,17 +272,35 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
                               <Check size={10} /> Main
                             </div>
                           )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeImage(i);
+                            }}
+                            style={{
+                              position: 'absolute', top: -8, right: -8,
+                              background: '#ef4444', color: 'white', borderRadius: '50%',
+                              width: 20, height: 20, display: 'flex', alignItems: 'center',
+                              justifyContent: 'center', border: 'none', cursor: 'pointer',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.2)', zIndex: 10,
+                            }}
+                          >
+                            <X size={12} />
+                          </button>
                         </div>
                       ))}
-                      <div
-                        style={{
-                          width: 100, height: 100, border: '2px dashed #d1d5db',
-                          borderRadius: 12, display: 'flex', alignItems: 'center',
-                          justifyContent: 'center', color: '#9CA3AF',
-                        }}
-                      >
-                        <Upload size={20} />
-                      </div>
+                      {imagePreviews.length < 5 && (
+                        <div
+                          style={{
+                            width: 100, height: 100, border: '2px dashed #d1d5db',
+                            borderRadius: 12, display: 'flex', alignItems: 'center',
+                            justifyContent: 'center', color: '#9CA3AF',
+                          }}
+                        >
+                          <Upload size={20} />
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <>

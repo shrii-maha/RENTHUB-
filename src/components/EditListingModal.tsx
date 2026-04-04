@@ -23,6 +23,7 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
     description: "",
     type: "Sale",
     image: "",
+    images: [] as string[],
   });
 
   useEffect(() => {
@@ -37,37 +38,64 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
         description: listing.description || "",
         type: listing.type || "Sale",
         image: listing.image || "",
+        images: listing.images || (listing.image ? [listing.image] : []),
       });
       setImagePreview(listing.image || "");
     }
   }, [listing]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImagePreview(ev.target?.result as string);
-    };
-    reader.readAsDataURL(file);
+    const remainingSlots = 5 - formData.images.length;
+    const filesToUpload = Array.from(files).slice(0, remainingSlots);
 
-    // Upload to server
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('image', file);
-      const res = await fetch('/api/upload', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (data.url) {
-        setFormData(prev => ({ ...prev, image: data.url }));
-      }
-    } catch (err) {
-      console.error('Upload failed:', err);
-    } finally {
-      setUploading(false);
+    if (filesToUpload.length === 0) {
+      alert("Maximum 5 images allowed.");
+      return;
     }
+
+    setUploading(true);
+    
+    for (const file of filesToUpload) {
+      // Upload to server
+      try {
+        const fd = new FormData();
+        fd.append('image', file);
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        const data = await res.json();
+        if (data.url) {
+          setFormData(prev => {
+            const nextImages = [...prev.images, data.url];
+            return { 
+              ...prev, 
+              images: nextImages,
+              image: nextImages[0]
+            };
+          });
+          if (formData.images.length === 0) {
+            setImagePreview(data.url);
+          }
+        }
+      } catch (err) {
+        console.error('Upload failed:', err);
+      }
+    }
+    setUploading(false);
+  };
+
+  const removeImage = (index: number) => {
+    setFormData(prev => {
+      const nextImages = prev.images.filter((_, i) => i !== index);
+      const nextImage = nextImages.length > 0 ? nextImages[0] : "";
+      setImagePreview(nextImage);
+      return { 
+        ...prev, 
+        images: nextImages,
+        image: nextImage 
+      };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -123,38 +151,55 @@ export default function EditListingModal({ isOpen, onClose, listing, onUpdate }:
                 <div className="grid grid-cols-1 md:grid-cols-[1.5fr_2fr] gap-10">
                     {/* Left: Image Panel */}
                     <div>
-                        <label style={labelStyle}>Featured Image</label>
-                        <div
-                            onClick={() => fileInputRef.current?.click()}
-                            style={{
-                                border: '2px dashed #E5E7EB',
-                                borderRadius: 24, 
-                                aspectRatio: '1',
-                                overflow: 'hidden',
-                                position: 'relative',
-                                cursor: 'pointer',
-                                background: '#F9FAFB',
-                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                            }}
-                            className="hover:border-black group"
-                        >
-                            {imagePreview ? (
-                                <>
-                                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700" />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                                        <div className="bg-white/90 p-4 rounded-2xl scale-90 group-hover:scale-100 transition-transform">
-                                            <Upload size={24} color="#000" />
+                        <label style={labelStyle}>Product Images (Max 5)</label>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                            {formData.images.map((img, idx) => (
+                                <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '16px', overflow: 'hidden', border: '1px solid #F3F4F6' }}>
+                                    <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <button
+                                        type="button"
+                                        onClick={() => removeImage(idx)}
+                                        style={{
+                                            position: 'absolute', top: 8, right: 8,
+                                            background: 'rgba(255,255,255,0.9)', border: 'none',
+                                            borderRadius: '50%', width: 24, height: 24,
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                            cursor: 'pointer', color: '#ef4444', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                        }}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                    {idx === 0 && (
+                                        <div style={{ position: 'absolute', bottom: 8, left: 8, background: '#000', color: '#fff', fontSize: '8px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                                            Main
                                         </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full gap-4 text-gray-400">
-                                    <Upload size={32} />
-                                    <span className="text-xs font-bold uppercase tracking-widest">Update Photo</span>
+                                    )}
+                                </div>
+                            ))}
+                            {formData.images.length < 5 && (
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    style={{
+                                        border: '2px dashed #E5E7EB',
+                                        borderRadius: 16, 
+                                        aspectRatio: '1',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                        background: '#F9FAFB',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    className="hover:border-black hover:bg-gray-50"
+                                >
+                                    <Upload size={20} className="text-gray-400" />
+                                    <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#9CA3AF', marginTop: '8px', textTransform: 'uppercase' }}>Add</span>
                                 </div>
                             )}
-                            <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
                         </div>
+                        <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handleImageUpload} style={{ display: 'none' }} />
+                        
                         {uploading && (
                             <div className="mt-4 flex items-center gap-3 text-xs font-bold text-gray-500 animate-pulse">
                                 <div className="w-4 h-4 border-2 border-gray-200 border-t-black rounded-full animate-spin" />
