@@ -45,13 +45,15 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     setUploading(true);
     
     for (const file of filesToUpload) {
-      // Show preview
+      // Local preview
       const reader = new FileReader();
       const previewPromise = new Promise<string>((resolve) => {
         reader.onload = (ev) => resolve(ev.target?.result as string);
       });
       reader.readAsDataURL(file);
       const previewUrl = await previewPromise;
+      
+      // Temporarily add preview
       setImagePreviews(prev => [...prev, previewUrl]);
 
       // Upload to server
@@ -69,9 +71,15 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
               image: nextImages[0]
             };
           });
+        } else {
+          // Upload responded but maybe with an error
+          throw new Error('Server did not return a URL');
         }
       } catch (err) {
         console.error('Upload failed:', err);
+        // Remove the preview if upload failed
+        setImagePreviews(prev => prev.filter(p => p !== previewUrl));
+        alert('One or more images failed to upload. Please check your connection and try again.');
       }
     }
     setUploading(false);
