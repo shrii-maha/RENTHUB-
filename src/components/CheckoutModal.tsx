@@ -232,10 +232,10 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
 
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
-    if (isOpen && product) {
+    if (isOpen && product && user) {
       setLoadingReviews(true);
       fetch(`/api/reviews/listing/${product.id}`)
         .then(res => res.json())
@@ -245,9 +245,9 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
         .catch(console.error)
         .finally(() => setLoadingReviews(false));
     }
-  }, [isOpen, product]);
+  }, [isOpen, product, user]);
 
-  if (!product) return null;
+  if (!isLoaded || !user || !product) return null;
 
   const numericPrice = parseInt(product.price.replace(/[^\d]/g, '')) || 0;
   const serviceFee = Math.floor(numericPrice * 0.05);

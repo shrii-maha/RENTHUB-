@@ -19,7 +19,7 @@ import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
 import { motion, useScroll, useSpring } from "motion/react";
 import { Product } from "./types";
-import { useUser } from "@clerk/clerk-react";
+import { useUser, useClerk } from "@clerk/clerk-react";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery'>('home');
@@ -157,18 +157,11 @@ export default function App() {
   };
 
   const { isSignedIn } = useUser();
+  const { openSignIn } = useClerk();
 
   const handleProductSelect = (product: Product) => {
     if (!isSignedIn) {
-      // Trigger sign in modal by clicking a hidden sign-in button or redirecting
-      // For simplicity in Clerk modal usage:
-      const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
-      if (signInBtn) {
-        signInBtn.click();
-      } else {
-        // Fallback: alert the user or redirect
-        window.location.href = "/sign-in";
-      }
+      openSignIn();
       return;
     }
     setSelectedProduct(product);
@@ -204,9 +197,7 @@ export default function App() {
       <Navbar 
         onOpenSell={() => {
           if (!isSignedIn) {
-            const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
-            if (signInBtn) signInBtn.click();
-            else window.location.href = "/sign-in";
+            openSignIn();
             return;
           }
           setIsSellModalOpen(true);
@@ -250,9 +241,7 @@ export default function App() {
                     <button 
                       onClick={() => {
                         if (!isSignedIn) {
-                          const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
-                          if (signInBtn) signInBtn.click();
-                          else window.location.href = "/sign-in";
+                          openSignIn();
                           return;
                         }
                         setIsSellModalOpen(true);
@@ -325,9 +314,7 @@ export default function App() {
         listings={listings}
         onOpenSell={() => {
           if (!isSignedIn) {
-            const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
-            if (signInBtn) signInBtn.click();
-            else window.location.href = "/sign-in";
+            openSignIn();
             return;
           }
           setIsDashboardOpen(false);
