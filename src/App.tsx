@@ -156,7 +156,21 @@ export default function App() {
     setListings(listings.filter(item => item.id !== id));
   };
 
+  const { isSignedIn } = useUser();
+
   const handleProductSelect = (product: Product) => {
+    if (!isSignedIn) {
+      // Trigger sign in modal by clicking a hidden sign-in button or redirecting
+      // For simplicity in Clerk modal usage:
+      const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
+      if (signInBtn) {
+        signInBtn.click();
+      } else {
+        // Fallback: alert the user or redirect
+        window.location.href = "/sign-in";
+      }
+      return;
+    }
     setSelectedProduct(product);
     setIsCheckoutModalOpen(true);
   };
@@ -188,7 +202,15 @@ export default function App() {
       />
 
       <Navbar 
-        onOpenSell={() => setIsSellModalOpen(true)} 
+        onOpenSell={() => {
+          if (!isSignedIn) {
+            const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
+            if (signInBtn) signInBtn.click();
+            else window.location.href = "/sign-in";
+            return;
+          }
+          setIsSellModalOpen(true);
+        }} 
         onOpenAdmin={() => setIsAdminPanelOpen(true)}
         onNavigate={handleNavigate}
         activeSection={activeSection}
@@ -226,7 +248,15 @@ export default function App() {
                       Explore Marketplace
                     </button>
                     <button 
-                      onClick={() => setIsSellModalOpen(true)}
+                      onClick={() => {
+                        if (!isSignedIn) {
+                          const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
+                          if (signInBtn) signInBtn.click();
+                          else window.location.href = "/sign-in";
+                          return;
+                        }
+                        setIsSellModalOpen(true);
+                      }}
                       className="w-full sm:w-auto px-12 py-6 bg-white border border-brand-primary/10 text-brand-primary rounded-full font-bold text-xl hover:bg-brand-muted transition-colors"
                     >
                       Sell an Item
@@ -294,6 +324,12 @@ export default function App() {
         onClose={() => setIsDashboardOpen(false)} 
         listings={listings}
         onOpenSell={() => {
+          if (!isSignedIn) {
+            const signInBtn = document.querySelector(".cl-signIn-button") as HTMLElement;
+            if (signInBtn) signInBtn.click();
+            else window.location.href = "/sign-in";
+            return;
+          }
           setIsDashboardOpen(false);
           setIsSellModalOpen(true);
         }}

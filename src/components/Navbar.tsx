@@ -77,11 +77,18 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
         </SignedIn>
 
         <SignedOut>
-          <SignInButton mode="modal">
-            <button className="hidden sm:block px-6 py-2.5 bg-brand-primary text-white rounded-full text-sm font-bold hover:bg-brand-primary/90 transition-all">
-              Sign In
-            </button>
-          </SignInButton>
+          <div className="flex items-center gap-4">
+            <SignInButton mode="modal">
+              <button className="hidden sm:block px-6 py-2.5 bg-brand-accent text-brand-primary rounded-full text-sm font-bold hover:scale-105 transition-all shadow-lg shadow-brand-accent/20 border border-brand-accent hover:border-black">
+                Sell Item
+              </button>
+            </SignInButton>
+            <SignInButton mode="modal">
+              <button className="hidden sm:block px-6 py-2.5 bg-brand-primary text-white rounded-full text-sm font-bold hover:bg-brand-primary/90 transition-all">
+                Sign In
+              </button>
+            </SignInButton>
+          </div>
         </SignedOut>
 
         <button className="p-2 md:hidden">
