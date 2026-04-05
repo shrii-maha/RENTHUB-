@@ -394,6 +394,43 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
                 </div>
               </div>
 
+              {/* PRODUCT DESCRIPTION */}
+              <div className="mb-8 px-2">
+                 <p className="text-xs text-brand-primary/60 leading-relaxed italic line-clamp-3">
+                    "{product.description || 'No description provided.'}"
+                 </p>
+              </div>
+
+              {/* SELLER TRUST CARD (PROMINENT POSITION) */}
+              <div className="bg-brand-primary/5 rounded-[2.5rem] p-8 border border-brand-primary/10 mb-10 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <ShieldCheck className="w-14 h-14" />
+                 </div>
+                 <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-4">
+                       <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-brand-accent">Seller Track Record</span>
+                       {product.sellerStats?.isVerified && (
+                         <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-accent text-brand-primary rounded-full text-[9px] font-black uppercase tracking-tighter">
+                            Verified Hub Pro
+                         </div>
+                       )}
+                    </div>
+                    <div className="flex items-baseline gap-3 mb-2">
+                       <span className="text-5xl font-display font-bold text-brand-primary">{product.sellerStats?.avgRating || '0.0'}</span>
+                       <span className="text-sm font-bold text-brand-primary/40 uppercase tracking-widest">★ Seller Score</span>
+                    </div>
+                    <p className="text-[12px] font-bold text-brand-primary/60 leading-relaxed mb-6">
+                       Verified successful completion of {product.sellerStats?.salesCount || 0} transactions.
+                    </p>
+                    
+                    <div className="p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-brand-primary/5">
+                       <p className="text-[10px] font-medium text-brand-primary/40 uppercase leading-snug tracking-tight">
+                          "While this specific item is new to the market, this seller has a proven history of excellence on RentHub."
+                       </p>
+                    </div>
+                 </div>
+              </div>
+
               <div className="space-y-6">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-400 uppercase tracking-widest text-[9px] font-bold">Base Price</span>
@@ -437,47 +474,6 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
                 </div>
               </div>
 
-              {/* REVIEWS SECTION */}
-              <div className="mt-12 pt-12 border-t border-gray-200">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-brand-primary/30">Honest Trust.</h3>
-                  <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-primary/5 rounded-full border border-brand-primary/10">
-                    <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
-                    <span className="text-[10px] font-bold text-brand-primary">
-                      {product.rating > 0 ? `${product.rating} (Listing)` : 'No Reviews Yet'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Seller Trust Profile */}
-                <div className="bg-brand-primary/5 rounded-3xl p-6 border border-brand-primary/10 mb-8 relative overflow-hidden group">
-                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <ShieldCheck className="w-12 h-12" />
-                   </div>
-                   <div className="relative z-10">
-                      <div className="flex items-center gap-2 mb-3">
-                         <span className="text-[10px] font-bold uppercase tracking-widest text-brand-accent">Seller Reputation</span>
-                         {product.sellerStats?.isVerified && (
-                           <div className="flex items-center gap-1 px-2 py-0.5 bg-brand-accent text-brand-primary rounded text-[8px] font-black uppercase">
-                              Verified
-                           </div>
-                         )}
-                      </div>
-                      <div className="flex items-baseline gap-2 mb-1">
-                         <span className="text-3xl font-display font-bold">{product.sellerStats?.avgRating || '0.0'}</span>
-                         <span className="text-sm font-bold text-brand-primary/40">★ Seller Score</span>
-                      </div>
-                      <p className="text-[11px] font-medium text-brand-primary/60 leading-relaxed mb-4">
-                         {product.sellerStats?.salesCount || 0} Successful Transactions Completed.
-                      </p>
-                      
-                      <div className="p-3 bg-white/50 rounded-xl border border-brand-primary/5">
-                         <p className="text-[9px] font-bold text-brand-primary/30 uppercase tracking-tighter leading-snug">
-                            "This product is unique and has no reviews yet. You can trust this seller based on their proven track record across all past listings."
-                         </p>
-                      </div>
-                   </div>
-                </div>
 
                 <div className="flex items-center justify-between mb-8">
                   <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-brand-primary/30">Past Feedback.</h3>
@@ -493,18 +489,17 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
                   )}
                 </div>
               </div>
-            </div>
-          </motion.div>
-          {isReceiptOpen && (
-            <ReceiptModal 
-              isOpen={isReceiptOpen} 
-              onClose={closeEverything} 
-              product={product} 
-              orderId={createdOrderId} 
-            />
-          )}
-        </div>
-      )}
-    </AnimatePresence>
+            </motion.div>
+            {isReceiptOpen && (
+              <ReceiptModal 
+                isOpen={isReceiptOpen} 
+                onClose={closeEverything} 
+                product={product} 
+                orderId={createdOrderId} 
+              />
+            )}
+          </div>
+        )}
+      </AnimatePresence>
   );
 }

@@ -12,6 +12,7 @@ export interface Product {
   sellerId: string;
   status?: 'pending' | 'approved' | 'rejected' | 'sold' | 'rented';
   createdAt: string;
+  description: string;
   sellerStats?: {
     avgRating: number;
     totalReviews: number;
