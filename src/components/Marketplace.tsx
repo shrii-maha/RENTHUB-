@@ -18,7 +18,7 @@ export default function Marketplace({ listings, searchFilters, onProductSelect }
   };
 
   const filtered = listings.filter(item => {
-    const isApproved = item.status === 'approved' || !item.status; // Support legacy items without status
+    const isApproved = item.status === 'approved'; // Only show items that have been approved by admin
     const matchesType = activeType === 'All' || item.type === activeType;
     const matchesLocation = !searchFilters?.location ||
       item.location.toLowerCase().includes(searchFilters.location.toLowerCase());

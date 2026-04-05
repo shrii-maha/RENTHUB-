@@ -23,6 +23,25 @@ import { useUser } from "@clerk/clerk-react";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery'>('home');
+  
+  const handleNavigate = (section: string) => {
+    if (section === 'how-it-works') {
+      setActiveSection('home');
+      setTimeout(() => {
+        const element = document.getElementById('how-it-works');
+        if (element) {
+          const navHeight = 80; // height of fixed navbar
+          const elementPosition = element.getBoundingClientRect().top + window.pageYOffset;
+          window.scrollTo({
+            top: elementPosition - navHeight,
+            behavior: 'smooth'
+          });
+        }
+      }, 100);
+    } else {
+      setActiveSection(section as any);
+    }
+  };
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
@@ -171,7 +190,7 @@ export default function App() {
       <Navbar 
         onOpenSell={() => setIsSellModalOpen(true)} 
         onOpenAdmin={() => setIsAdminPanelOpen(true)}
-        onNavigate={setActiveSection}
+        onNavigate={handleNavigate}
         activeSection={activeSection}
         onOpenDashboard={() => setIsDashboardOpen(true)}
         onCategorySelect={handleCategorySelect}
@@ -248,7 +267,7 @@ export default function App() {
         )}
       </main>
 
-      <Footer onNavigate={setActiveSection} />
+      <Footer onNavigate={handleNavigate} />
 
       <CheckoutModal
         isOpen={isCheckoutModalOpen}

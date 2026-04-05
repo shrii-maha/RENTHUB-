@@ -10,7 +10,7 @@ interface FeaturedListingsProps {
 export default function FeaturedListings({ onProductSelect, listings }: FeaturedListingsProps) {
   // Show the most recent 3 items as "featured" (Only approved ones)
   const featuredDisplay = listings
-    .filter(item => item.status === 'approved' || !item.status)
+    .filter(item => item.status === 'approved')
     .slice(0, 3);
 
   if (listings.length === 0) return null;

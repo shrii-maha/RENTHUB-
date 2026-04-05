@@ -611,6 +611,7 @@ app.post('/api/seed', async (_req, res) => {
         rating: 4.9,
         image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=2070",
         category: "Real Estate",
+        status: "approved",
         sellerId: "admin",
       },
       {
@@ -621,6 +622,7 @@ app.post('/api/seed', async (_req, res) => {
         rating: 5.0,
         image: "https://images.unsplash.com/photo-1617788138017-80ad42243c59?auto=format&fit=crop&q=80&w=2070",
         category: "Vehicle",
+        status: "approved",
         sellerId: "admin",
       },
       {
@@ -631,6 +633,7 @@ app.post('/api/seed', async (_req, res) => {
         rating: 4.8,
         image: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&q=80&w=2070",
         category: "Luxury Watches",
+        status: "approved",
         sellerId: "admin",
       },
       {
@@ -641,6 +644,7 @@ app.post('/api/seed', async (_req, res) => {
         rating: 4.7,
         image: "https://images.unsplash.com/photo-1579412691511-2721b7155018?auto=format&fit=crop&q=80&w=2070",
         category: "Tools & Hardware",
+        status: "approved",
         sellerId: "admin",
       },
       {
@@ -651,6 +655,7 @@ app.post('/api/seed', async (_req, res) => {
         rating: 5.0,
         image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=2070",
         category: "Furniture",
+        status: "approved",
         sellerId: "admin",
       },
       {
@@ -661,6 +666,7 @@ app.post('/api/seed', async (_req, res) => {
         rating: 4.9,
         image: "https://images.unsplash.com/photo-1696446701796-da61225697cc?auto=format&fit=crop&q=80&w=2070",
         category: "Electronics",
+        status: "approved",
         sellerId: "admin",
       }
     ];
