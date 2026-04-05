@@ -593,7 +593,7 @@ app.post('/api/reviews', async (req, res) => {
     });
 
     const activity = new ActivityLog({
-      actionType: 'approval',
+      actionType: 'rental',
       message: 'New Review Received',
       details: `Buyer left a ${rating}-star review for order ${orderId}`
     });

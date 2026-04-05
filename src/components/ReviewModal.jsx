@@ -63,13 +63,13 @@ export default function ReviewModal({ isOpen, onClose, order, onReviewSubmitted 
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
+          className="relative w-full max-w-md bg-white rounded-[2rem] shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="p-8 pb-0 flex justify-between items-start">
+          <div className="p-6 pb-0 flex justify-between items-start">
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-brand-accent mb-2 block">Feedback Portal</span>
-              <h2 className="text-3xl font-display font-bold italic tracking-tight text-black">
+              <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-brand-accent mb-1 block">Feedback Portal</span>
+              <h2 className="text-2xl font-display font-bold italic tracking-tight text-black">
                 Rate & <span className="text-brand-accent">Review</span>.
               </h2>
             </div>
@@ -78,11 +78,11 @@ export default function ReviewModal({ isOpen, onClose, order, onReviewSubmitted 
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-8 pt-6 space-y-8">
+          <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-6">
             {/* Interactive Stars */}
-            <div className="bg-brand-muted/10 p-8 rounded-[2rem] text-center border border-brand-primary/5">
-              <p className="text-xs font-bold text-brand-primary/40 uppercase tracking-widest mb-4">How was your experience?</p>
-              <div className="flex justify-center gap-3">
+            <div className="bg-brand-muted/10 p-6 rounded-[1.5rem] text-center border border-brand-primary/5">
+              <p className="text-[10px] font-bold text-brand-primary/40 uppercase tracking-widest mb-3">How was your experience?</p>
+              <div className="flex justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
@@ -93,7 +93,7 @@ export default function ReviewModal({ isOpen, onClose, order, onReviewSubmitted 
                     className="transition-transform active:scale-95"
                   >
                     <Star
-                      className={`w-10 h-10 ${
+                      className={`w-8 h-8 ${
                         (hover || rating) >= star 
                           ? 'fill-brand-accent text-brand-accent animate-pulse' 
                           : 'text-gray-200'
@@ -115,8 +115,8 @@ export default function ReviewModal({ isOpen, onClose, order, onReviewSubmitted 
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="What did you think of the product and the seller's communication?"
-                className="w-full h-32 px-6 py-4 bg-gray-50 rounded-[1.5rem] border-2 border-transparent focus:border-brand-accent focus:bg-white outline-none transition-all text-sm font-medium resize-none shadow-inner"
+                placeholder="What did you think of the product?"
+                className="w-full h-24 px-5 py-3 bg-gray-50 rounded-[1.2rem] border-2 border-transparent focus:border-brand-accent focus:bg-white outline-none transition-all text-xs font-medium resize-none shadow-inner"
               />
             </div>
 
