@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck } from "lucide-react";
+import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star } from "lucide-react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
 import ReceiptModal from "./ReceiptModal";
+import ReviewModal from "./ReviewModal";
 
 interface UserDashboardProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
   const [userListings, setUserListings] = useState<Product[]>([]);
   const [receiptData, setReceiptData] = useState<any>(null);
   const [requestingPayout, setRequestingPayout] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [selectedOrderForReview, setSelectedOrderForReview] = useState<any>(null);
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
   const userEmail = user?.primaryEmailAddress?.emailAddress;
@@ -229,7 +232,15 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
 
                   {activeTab === 'purchases' && (
                     <motion.div key="purchases" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <PurchasesGrid orders={buyerOrders} setBuyerOrders={setBuyerOrders} onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} />
+                      <PurchasesGrid 
+                        orders={buyerOrders} 
+                        setBuyerOrders={setBuyerOrders} 
+                        onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} 
+                        onOpenReview={(order: any) => {
+                          setSelectedOrderForReview(order);
+                          setIsReviewModalOpen(true);
+                        }}
+                      />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -243,6 +254,18 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
               onClose={() => setReceiptData(null)} 
               product={receiptData.product} 
               orderId={receiptData.orderId} 
+            />
+          )}
+
+          {isReviewModalOpen && selectedOrderForReview && (
+            <ReviewModal
+              isOpen={isReviewModalOpen}
+              onClose={() => setIsReviewModalOpen(false)}
+              order={selectedOrderForReview}
+              onReviewSubmitted={() => {
+                // Optionally update UI to show "Reviewed" status
+                setBuyerOrders(prev => prev.map(o => o._id === selectedOrderForReview._id ? { ...o, reviewed: true } : o));
+              }}
             />
           )}
 
@@ -495,7 +518,12 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
   );
 }
 
-function PurchasesGrid({ orders, setBuyerOrders, onViewSource }: { orders: any[], setBuyerOrders: React.Dispatch<React.SetStateAction<any[]>>, onViewSource?: (order: any) => void }) {
+function PurchasesGrid({ orders, setBuyerOrders, onViewSource, onOpenReview }: { 
+  orders: any[], 
+  setBuyerOrders: React.Dispatch<React.SetStateAction<any[]>>, 
+  onViewSource?: (order: any) => void,
+  onOpenReview: (order: any) => void 
+}) {
   if (!orders || orders.length === 0) {
     return (
       <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm p-12 text-center mt-8">
@@ -554,9 +582,26 @@ function PurchasesGrid({ orders, setBuyerOrders, onViewSource }: { orders: any[]
               }} />
             )}
             {order.status === 'released' && (
-              <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-4 py-2 rounded-xl">
-                <PackageCheck className="w-4 h-4" />
-                <span>Delivery confirmed. Payment released to seller.</span>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 px-4 py-2 rounded-xl">
+                  <PackageCheck className="w-4 h-4" />
+                  <span>Delivery confirmed. Payment released to seller.</span>
+                </div>
+                {!order.reviewed && (
+                  <button 
+                    onClick={() => onOpenReview(order)}
+                    className="flex items-center justify-center gap-2 py-3 bg-brand-primary text-white rounded-xl font-bold text-xs hover:bg-black transition-all shadow-lg shadow-brand-primary/10"
+                  >
+                    <Star className="w-4 h-4 fill-brand-accent text-brand-accent" />
+                    Rate Your Experience
+                  </button>
+                )}
+                {order.reviewed && (
+                  <div className="flex items-center justify-center gap-2 py-2 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                    Review Submitted
+                  </div>
+                )}
               </div>
             )}
           </div>

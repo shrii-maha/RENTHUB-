@@ -13,6 +13,7 @@ import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
 import User from './models/User.js';
+import Review from './models/Review.js';
 import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
@@ -556,6 +557,69 @@ app.post('/api/users/sync', async (req, res) => {
       await user.save();
     }
     res.json(user);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── RATING & REVIEW ROUTES ──────────────────────────
+
+// POST create a review
+app.post('/api/reviews', async (req, res) => {
+  try {
+    const { orderId, listingId, buyerId, sellerId, rating, comment } = req.body;
+
+    // 1. Verify order exists and is eligible for review
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+    if (!['delivered', 'released', 'paid'].includes(order.status)) {
+      return res.status(400).json({ error: "Order must be delivered before reviewing" });
+    }
+
+    // 2. Check for duplicate review
+    const existing = await Review.findOne({ orderId });
+    if (existing) return res.status(400).json({ error: "Review already exists for this order" });
+
+    // 3. Save the review
+    const review = new Review({ orderId, listingId, buyerId, sellerId, rating, comment });
+    await review.save();
+
+    // 4. Update Listing Average Rating
+    const reviews = await Review.find({ listingId });
+    const avgRating = reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviews.length;
+    
+    await Listing.findByIdAndUpdate(listingId, { 
+      rating: Math.round(avgRating * 10) / 10 
+    });
+
+    const activity = new ActivityLog({
+      actionType: 'approval',
+      message: 'New Review Received',
+      details: `Buyer left a ${rating}-star review for order ${orderId}`
+    });
+    await activity.save();
+
+    res.status(201).json(review);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET reviews for a listing
+app.get('/api/reviews/listing/:id', async (req, res) => {
+  try {
+    const reviews = await Review.find({ listingId: req.params.id }).sort({ createdAt: -1 });
+    res.json(reviews);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET reviews for a seller
+app.get('/api/reviews/seller/:email', async (req, res) => {
+  try {
+    const reviews = await Review.find({ sellerId: req.params.email }).sort({ createdAt: -1 });
+    res.json(reviews);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

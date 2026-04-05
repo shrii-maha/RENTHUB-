@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, ShieldCheck, CreditCard, Landmark, QrCode, AlertCircle, CheckCircle } from "lucide-react";
+import { X, ShieldCheck, CreditCard, Landmark, QrCode, AlertCircle, CheckCircle, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
 import { loadStripe } from "@stripe/stripe-js";
@@ -12,6 +12,7 @@ import {
   useElements,
 } from "@stripe/react-stripe-js";
 import ReceiptModal from "./ReceiptModal";
+import ReviewList from "./ReviewList";
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -228,8 +229,23 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'bank'>('card');
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState("");
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [loadingReviews, setLoadingReviews] = useState(false);
 
   const { user } = useUser();
+
+  useEffect(() => {
+    if (isOpen && product) {
+      setLoadingReviews(true);
+      fetch(`/api/reviews/listing/${product.id}`)
+        .then(res => res.json())
+        .then(data => {
+          setReviews(Array.isArray(data) ? data : []);
+        })
+        .catch(console.error)
+        .finally(() => setLoadingReviews(false));
+    }
+  }, [isOpen, product]);
 
   if (!product) return null;
 
@@ -418,6 +434,27 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
                   <p className="text-[11px] text-white/50 leading-relaxed italic">
                     Funds are placed in a secure escrow account until delivery is confirmed. You're 100% protected against fraud.
                   </p>
+                </div>
+              </div>
+
+              {/* REVIEWS SECTION */}
+              <div className="mt-12 pt-12 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-brand-primary/30">User Reviews.</h3>
+                  <div className="flex items-center gap-1 bg-brand-accent/10 px-3 py-1 rounded-full">
+                    <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
+                    <span className="text-[10px] font-bold text-brand-accent">{product.rating || '5.0'}</span>
+                  </div>
+                </div>
+
+                <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                  {loadingReviews ? (
+                    <div className="flex justify-center py-10 opacity-20">
+                      <div className="w-6 h-6 border-2 border-brand-primary border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <ReviewList reviews={reviews} />
+                  )}
                 </div>
               </div>
             </div>
