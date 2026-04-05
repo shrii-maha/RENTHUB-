@@ -376,7 +376,7 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
             </div>
 
             {/* RIGHT SIDE: ORDER SUMMARY */}
-            <div className="w-full md:w-[480px] bg-brand-muted/10 p-8 md:p-12 border-l border-gray-100 bg-gradient-to-b from-brand-muted/20 to-white">
+            <div className="w-full md:w-[480px] bg-brand-muted/10 p-8 md:p-12 border-l border-gray-100 bg-gradient-to-b from-brand-muted/20 to-white overflow-y-auto max-h-full custom-scrollbar">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-bold uppercase tracking-widest text-brand-primary/30">Summary.</h3>
                 <button onClick={closeEverything} className="p-2 hover:bg-gray-200 rounded-full transition-colors hidden md:block">
