@@ -29,14 +29,6 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [listings, setListings] = useState<Product[]>([]);
   const [searchFilters, setSearchFilters] = useState<{ location: string; dates: string; category: string } | undefined>();
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('theme');
-      if (saved) return saved === 'dark';
-      return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-    return false;
-  });
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -136,20 +128,8 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [activeSection]);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-    }
-  }, [isDarkMode]);
-
-  const toggleDarkMode = () => setIsDarkMode(prev => !prev);
-
   return (
-    <div className="relative min-h-screen transition-colors duration-300 selection:bg-brand-accent selection:text-white">
+    <div className="relative min-h-screen bg-white selection:bg-brand-accent selection:text-white">
       <motion.div
         className="fixed top-0 left-0 right-0 h-1 bg-brand-accent z-[60] origin-left"
         style={{ scaleX }}
@@ -161,8 +141,6 @@ export default function App() {
         onNavigate={setActiveSection}
         activeSection={activeSection}
         onOpenDashboard={() => setIsDashboardOpen(true)}
-        isDarkMode={isDarkMode}
-        toggleDarkMode={toggleDarkMode}
       />
       
       <main>

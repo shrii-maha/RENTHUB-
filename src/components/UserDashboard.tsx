@@ -190,7 +190,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                   {activeTab === 'earnings' && (
                     <motion.div key="earnings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                       <EarningsSummary balance={availableBalance} pending={pendingEarnings} totalPaid={totalPaidOut} />
-                      <TransactionHistory orders={orders} setOrders={setOrders} />
+                      <TransactionHistory orders={orders} />
                     </motion.div>
                   )}
 
@@ -202,7 +202,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
 
                   {activeTab === 'purchases' && (
                     <motion.div key="purchases" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <PurchasesGrid orders={buyerOrders} setBuyerOrders={setBuyerOrders} onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} />
+                      <PurchasesGrid orders={buyerOrders} onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -294,7 +294,7 @@ function EarningsSummary({ balance, pending, totalPaid }: { balance: number, pen
   );
 }
 
-function TransactionHistory({ orders, setOrders }: { orders: any[], setOrders: React.Dispatch<React.SetStateAction<any[]>> }) {
+function TransactionHistory({ orders }: { orders: any[] }) {
   if (!orders || orders.length === 0) {
     return (
       <div className="bg-white border md:border-dashed border-gray-100 rounded-[3rem] overflow-hidden p-16 text-center shadow-sm">
@@ -447,7 +447,7 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
   );
 }
 
-function PurchasesGrid({ orders, setBuyerOrders, onViewSource }: { orders: any[], setBuyerOrders: React.Dispatch<React.SetStateAction<any[]>>, onViewSource?: (order: any) => void }) {
+function PurchasesGrid({ orders, setBuyerOrders }: { orders: any[], setBuyerOrders: React.Dispatch<React.SetStateAction<any[]>> }) {
   if (!orders || orders.length === 0) {
     return (
       <div className="bg-white border border-gray-100 rounded-[2.5rem] overflow-hidden shadow-sm p-12 text-center mt-8">
