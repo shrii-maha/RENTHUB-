@@ -1,4 +1,4 @@
-import { Search, Menu, Shield, LayoutDashboard } from "lucide-react";
+import { Search, Menu, Shield, LayoutDashboard, Moon, Sun } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/clerk-react";
 
 interface NavbarProps {
@@ -7,9 +7,11 @@ interface NavbarProps {
   onNavigate: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery') => void;
   activeSection: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery';
   onOpenDashboard: () => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
-export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard }: NavbarProps) {
+export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, isDarkMode, toggleDarkMode }: NavbarProps) {
   const { user } = useUser();
   const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -38,7 +40,10 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
       </div>
 
       <div className="flex items-center gap-4">
-        <button className="p-2 hover:bg-brand-muted rounded-full transition-colors">
+        <button onClick={toggleDarkMode} className="p-2 hover:bg-brand-muted text-brand-primary/60 hover:text-brand-primary rounded-full transition-colors" title="Toggle Theme">
+          {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
+        <button className="p-2 hover:bg-brand-muted text-brand-primary/60 hover:text-brand-primary rounded-full transition-colors">
           <Search className="w-5 h-5" />
         </button>
 
