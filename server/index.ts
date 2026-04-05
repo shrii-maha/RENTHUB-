@@ -808,6 +808,6 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`🚀 RentHub API running on http://localhost:${PORT}`);
+app.listen(Number(PORT), "0.0.0.0", () => {
+  console.log(`🚀 RentHub API is running on port ${PORT}`);
 });

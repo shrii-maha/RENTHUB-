@@ -45,9 +45,9 @@ export default function Hero({ onSearch }: HeroProps) {
         </motion.div>
       </div>
 
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-4">
-        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-brand-primary/40">Scroll to explore</p>
-        <div className="w-px h-12 bg-gradient-to-b from-brand-primary/40 to-transparent"></div>
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2">
+        <p className="text-[9px] font-mono uppercase tracking-[0.4em] text-brand-primary/30">Scroll to explore</p>
+        <div className="w-px h-16 bg-gradient-to-b from-brand-primary/30 to-transparent"></div>
       </div>
     </section>
   );
