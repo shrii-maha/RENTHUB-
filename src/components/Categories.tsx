@@ -51,7 +51,7 @@ export default function Categories({ onCategorySelect }: CategoriesProps) {
                 <cat.icon className="w-8 h-8 text-brand-primary group-hover:text-white transition-colors" />
               </div>
               <h3 className="text-xl font-display font-bold mb-2">{cat.name}</h3>
-              <p className="text-xs font-mono uppercase tracking-widest opacity-40 group-hover:opacity-60">{cat.count} listings</p>
+              <p className="text-xs font-mono uppercase tracking-widest opacity-40 group-hover:opacity-60">{cat.count}</p>
             </motion.div>
           ))}
         </div>
