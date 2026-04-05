@@ -12,6 +12,7 @@ import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
+import User from './models/User.js';
 import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
@@ -494,29 +495,79 @@ app.get('/api/admin/activity', async (_req, res) => {
   }
 });
 
+// POST sync user data
+app.post('/api/users/sync', async (req, res) => {
+  try {
+    const { clerkId, email, fullName } = req.body;
+    if (!clerkId || !email) return res.status(400).json({ error: "Missing required fields" });
+
+    let user = await User.findOne({ clerkId });
+    if (user) {
+      user.email = email;
+      user.fullName = fullName || user.fullName;
+      user.lastActiveAt = new Date();
+      await user.save();
+    } else {
+      user = new User({ clerkId, email, fullName: fullName || email.split('@')[0], lastActiveAt: new Date() });
+      await user.save();
+    }
+    res.json(user);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // GET active sellers (Users Directory)
 app.get('/api/admin/users', async (_req, res) => {
   try {
-    const users = await Listing.aggregate([
+    const sellerStats = await Listing.aggregate([
       {
         $group: {
           _id: "$sellerId",
           totalListings: { $sum: 1 },
-          avgRating: { $avg: "$rating" },
-          lastActive: { $max: "$updatedAt" }
+          avgRating: { $avg: "$rating" }
         }
-      },
-      {
-        $project: {
-          email: "$_id",
-          totalListings: 1,
-          avgRating: { $round: ["$avgRating", 1] },
-          lastActive: 1
-        }
-      },
-      { $sort: { lastActive: -1 } }
+      }
     ]);
-    res.json(users);
+
+    const realUsers = await User.find().lean();
+
+    const mergedUsers = realUsers.map(u => {
+      const stats = sellerStats.find(s => s._id === u.clerkId || s._id === u.email);
+      return {
+        _id: u._id,
+        email: u.email,
+        fullName: u.fullName,
+        clerkId: u.clerkId,
+        lastActive: u.lastActiveAt,
+        totalListings: stats ? stats.totalListings : 0,
+        avgRating: stats && stats.avgRating ? Math.round(stats.avgRating * 10) / 10 : null
+      };
+    });
+
+    sellerStats.forEach(stats => {
+      const exists = mergedUsers.find(u => u.clerkId === stats._id || u.email === stats._id);
+      if (!exists) {
+        mergedUsers.push({
+          _id: stats._id,
+          email: stats._id,
+          fullName: stats._id.includes('@') ? stats._id.split('@')[0] : stats._id,
+          clerkId: stats._id,
+          lastActive: null,
+          totalListings: stats.totalListings,
+          avgRating: stats.avgRating ? Math.round(stats.avgRating * 10) / 10 : null
+        });
+      }
+    });
+
+    mergedUsers.sort((a, b) => {
+       if (a.lastActive && b.lastActive) return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
+       if (a.lastActive) return -1;
+       if (b.lastActive) return 1;
+       return b.totalListings - a.totalListings;
+    });
+
+    res.json(mergedUsers);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

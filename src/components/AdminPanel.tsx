@@ -439,24 +439,34 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                <tr><td colSpan={4} className="p-10 text-center text-sm font-bold text-gray-400 animate-pulse">Syncing user database...</td></tr>
                             ) : usersList.length === 0 ? (
                                <tr><td colSpan={4} className="p-10 text-center text-sm font-bold text-gray-400 italic">No active sellers found.</td></tr>
-                            ) : usersList.map((usr: any, index: number) => (
+                            ) : usersList.map((usr: any, index: number) => {
+                               const isActive = usr.lastActive && new Date().getTime() - new Date(usr.lastActive).getTime() < 15 * 60 * 1000;
+                               const displayName = usr.fullName || usr.email.split('@')[0];
+                               
+                               return (
                                <tr key={index} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
                                   <td className="p-6">
                                       <div className="flex items-center gap-4">
                                           <div className="w-12 h-12 bg-black text-white rounded-[16px] flex items-center justify-center font-bold text-xl shadow-sm border border-gray-800">
-                                             {usr.email.charAt(0).toUpperCase()}
+                                             {displayName.charAt(0).toUpperCase()}
                                           </div>
                                           <div>
-                                              <div className="font-extrabold text-black text-[15px]">{usr.email.split('@')[0].charAt(0).toUpperCase() + usr.email.split('@')[0].slice(1)}</div>
+                                              <div className="font-extrabold text-black text-[15px]">{displayName}</div>
                                               <div className="text-xs font-medium text-gray-400 mt-0.5 tracking-wide">{usr.email}</div>
                                           </div>
                                       </div>
                                   </td>
                                   <td className="p-6">
                                       <div className="text-[14px] font-extrabold text-black mb-1">{usr.totalListings} Listings Posted</div>
-                                      <div className="flex items-center gap-1.5 text-xs font-bold text-green-500 tracking-wide mt-1">
-                                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_#10B981]"></div> Active Seller
-                                      </div>
+                                      {isActive ? (
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-green-500 tracking-wide mt-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_#10B981]"></div> Active on Website
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-400 tracking-wide mt-1">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div> Offline {usr.lastActive && `(Seen ${Math.floor((new Date().getTime() - new Date(usr.lastActive).getTime()) / 60000)}m ago)`}
+                                        </div>
+                                      )}
                                   </td>
                                   <td className="p-6 font-extrabold text-brand-accent text-lg drop-shadow-sm">
                                       ⭐ {usr.avgRating ? usr.avgRating.toFixed(1) : "5.0"}
@@ -465,7 +475,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                       <button className="px-5 py-2.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100 rounded-xl font-bold text-xs cursor-pointer shadow-sm transition-all active:scale-95 text-center inline-block">Suspend</button>
                                   </td>
                                </tr>
-                            ))}
+                            )})}
                           </tbody>
                         </table>
                       </div>

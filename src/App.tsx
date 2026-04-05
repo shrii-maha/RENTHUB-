@@ -19,6 +19,7 @@ import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
 import { motion, useScroll, useSpring } from "motion/react";
 import { Product } from "./types";
+import { useUser } from "@clerk/clerk-react";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState<'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery'>('home');
@@ -29,6 +30,33 @@ export default function App() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [listings, setListings] = useState<Product[]>([]);
   const [searchFilters, setSearchFilters] = useState<{ location: string; dates: string; category: string } | undefined>();
+
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user) {
+      const syncUser = async () => {
+        try {
+          await fetch('/api/users/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              clerkId: user.id,
+              email: user.primaryEmailAddress?.emailAddress,
+              fullName: user.fullName || user.firstName || ''
+            })
+          });
+        } catch (err) {
+          console.error('Failed to sync user', err);
+        }
+      };
+      syncUser();
+      
+      // Ping every 5 minutes to keep "online" status fresh
+      const interval = setInterval(syncUser, 5 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
