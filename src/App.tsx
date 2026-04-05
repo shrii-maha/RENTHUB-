@@ -215,7 +215,13 @@ export default function App() {
             <Hero onSearch={handleSearch} />
             <Categories onCategorySelect={handleCategorySelect} />
             <FeaturedListings onProductSelect={handleProductSelect} listings={listings} />
-            <HowItWorks onOpenSell={() => setIsSellModalOpen(true)} />
+            <HowItWorks onOpenSell={() => {
+              if (!isSignedIn) {
+                openSignIn();
+                return;
+              }
+              setIsSellModalOpen(true);
+            }} />
             
             <FounderCard />
 

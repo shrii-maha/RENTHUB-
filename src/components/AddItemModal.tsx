@@ -10,7 +10,10 @@ interface AddItemModalProps {
 }
 
 export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
+
+  if (!isLoaded || !user) return null;
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -127,7 +130,7 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     const newItem = {
       ...formData,
       rating: 5.0,
-      sellerId: user?.id || "anonymous",
+      sellerId: user.id, // Strictly using user.id, no 'anonymous' fallback
       createdAt: new Date().toISOString(),
     };
 
