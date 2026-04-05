@@ -7,9 +7,10 @@ interface NavbarProps {
   onNavigate: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery') => void;
   activeSection: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery';
   onOpenDashboard: () => void;
+  onSearch?: (filters: { location: string; dates: string; category: string }) => void;
 }
 
-export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard }: NavbarProps) {
+export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, onSearch }: NavbarProps) {
   const { user } = useUser();
   const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -29,12 +30,22 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
         </button>
         <button 
           onClick={() => onNavigate('items')}
-          className={`transition-colors ${activeSection === 'items' ? 'text-brand-accent' : 'text-brand-primary/60 hover:text-brand-primary'}`}
+          className={`transition-colors cursor-pointer ${activeSection === 'items' ? 'text-brand-accent' : 'text-brand-primary/60 hover:text-brand-primary'}`}
         >
           Marketplace
         </button>
-        <a href="#" className="text-brand-primary/60 hover:text-brand-primary transition-colors">Villas</a>
-        <a href="#" className="text-brand-primary/60 hover:text-brand-primary transition-colors">Vehicles</a>
+        <button 
+          onClick={() => onSearch && onSearch({ location: '', dates: '', category: 'Real Estate' })}
+          className="text-brand-primary/60 hover:text-brand-primary transition-colors cursor-pointer"
+        >
+          Villas
+        </button>
+        <button 
+          onClick={() => onSearch && onSearch({ location: '', dates: '', category: 'Vehicle' })}
+          className="text-brand-primary/60 hover:text-brand-primary transition-colors cursor-pointer"
+        >
+          Vehicles
+        </button>
       </div>
 
       <div className="flex items-center gap-4">

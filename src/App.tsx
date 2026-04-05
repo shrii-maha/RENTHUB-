@@ -169,6 +169,7 @@ export default function App() {
         onNavigate={setActiveSection}
         activeSection={activeSection}
         onOpenDashboard={() => setIsDashboardOpen(true)}
+        onSearch={handleSearch}
       />
       
       <main>
