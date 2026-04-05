@@ -4,7 +4,7 @@ import { Home, Wrench, Car, Smartphone, Watch, Shirt, Sofa, Package } from "luci
 const categories = [
   { name: "Real Estate", icon: Home, count: "View listings" },
   { name: "Tools & Hardware", icon: Wrench, count: "View listings" },
-  { name: "Vehicles", icon: Car, count: "View listings" },
+  { name: "Vehicle", icon: Car, count: "View listings" },
   { name: "Electronics", icon: Smartphone, count: "View listings" },
   { name: "Luxury Watches", icon: Watch, count: "View listings" },
   { name: "Fashion", icon: Shirt, count: "View listings" },
@@ -12,7 +12,11 @@ const categories = [
   { name: "General Items", icon: Package, count: "View listings" },
 ];
 
-export default function Categories() {
+interface CategoriesProps {
+  onCategorySelect: (category: string) => void;
+}
+
+export default function Categories({ onCategorySelect }: CategoriesProps) {
   return (
     <section className="py-24 px-6 md:px-12 bg-brand-muted/30">
       <div className="max-w-7xl mx-auto">
@@ -24,7 +28,10 @@ export default function Categories() {
               <span className="italic text-brand-accent">Curated</span> Collections.
             </h2>
           </div>
-          <button className="text-sm font-mono uppercase tracking-widest text-brand-primary/60 hover:text-brand-primary transition-colors border-b border-brand-primary/20 pb-1">
+          <button 
+            onClick={() => onCategorySelect("")}
+            className="text-sm font-mono uppercase tracking-widest text-brand-primary/60 hover:text-brand-primary transition-colors border-b border-brand-primary/20 pb-1"
+          >
             View All Categories
           </button>
         </div>
@@ -37,6 +44,7 @@ export default function Categories() {
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
               viewport={{ once: true }}
+              onClick={() => onCategorySelect(cat.name)}
               className="group glass p-8 rounded-3xl flex flex-col items-center text-center hover:bg-brand-primary hover:text-white transition-all duration-500 cursor-pointer"
             >
               <div className="w-16 h-16 bg-brand-muted rounded-2xl flex items-center justify-center mb-6 group-hover:bg-white/20 transition-colors">

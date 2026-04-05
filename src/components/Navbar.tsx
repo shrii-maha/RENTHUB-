@@ -7,10 +7,10 @@ interface NavbarProps {
   onNavigate: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery') => void;
   activeSection: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery';
   onOpenDashboard: () => void;
-  onSearch?: (filters: { location: string; dates: string; category: string }) => void;
+  onCategorySelect: (category: string) => void;
 }
 
-export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, onSearch }: NavbarProps) {
+export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, onCategorySelect }: NavbarProps) {
   const { user } = useUser();
   const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
 
@@ -30,19 +30,19 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
         </button>
         <button 
           onClick={() => onNavigate('items')}
-          className={`transition-colors cursor-pointer ${activeSection === 'items' ? 'text-brand-accent' : 'text-brand-primary/60 hover:text-brand-primary'}`}
+          className={`transition-colors ${activeSection === 'items' ? 'text-brand-accent' : 'text-brand-primary/60 hover:text-brand-primary'}`}
         >
           Marketplace
         </button>
         <button 
-          onClick={() => onSearch && onSearch({ location: '', dates: '', category: 'Real Estate' })}
-          className="text-brand-primary/60 hover:text-brand-primary transition-colors cursor-pointer"
+          onClick={() => onCategorySelect("Real Estate")}
+          className="text-brand-primary/60 hover:text-brand-primary transition-colors"
         >
           Villas
         </button>
         <button 
-          onClick={() => onSearch && onSearch({ location: '', dates: '', category: 'Vehicle' })}
-          className="text-brand-primary/60 hover:text-brand-primary transition-colors cursor-pointer"
+          onClick={() => onCategorySelect("Vehicle")}
+          className="text-brand-primary/60 hover:text-brand-primary transition-colors"
         >
           Vehicles
         </button>

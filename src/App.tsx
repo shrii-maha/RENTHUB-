@@ -147,6 +147,11 @@ export default function App() {
     setActiveSection('items');
   };
 
+  const handleCategorySelect = (category: string) => {
+    setSearchFilters({ location: "", dates: "", category });
+    setActiveSection('items');
+  };
+
   const handleOrderSuccess = (productId: string) => {
     // Remove the product from the current marketplace listings
     setListings(prev => prev.filter(item => item.id !== productId));
@@ -169,14 +174,14 @@ export default function App() {
         onNavigate={setActiveSection}
         activeSection={activeSection}
         onOpenDashboard={() => setIsDashboardOpen(true)}
-        onSearch={handleSearch}
+        onCategorySelect={handleCategorySelect}
       />
       
       <main>
         {activeSection === 'home' && (
           <>
             <Hero onSearch={handleSearch} />
-            <Categories />
+            <Categories onCategorySelect={handleCategorySelect} />
             <FeaturedListings onProductSelect={handleProductSelect} listings={listings} />
             <HowItWorks onOpenSell={() => setIsSellModalOpen(true)} />
             
@@ -196,7 +201,7 @@ export default function App() {
                   </p>
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                     <button 
-                      onClick={() => setActiveSection('items')}
+                      onClick={() => handleCategorySelect("")}
                       className="w-full sm:w-auto px-12 py-6 bg-brand-primary text-white rounded-full font-bold text-xl hover:scale-105 transition-transform shadow-2xl shadow-brand-primary/20"
                     >
                       Explore Marketplace
