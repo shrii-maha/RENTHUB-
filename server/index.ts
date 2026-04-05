@@ -134,8 +134,34 @@ app.post('/api/create-payment-intent', async (req, res) => {
 app.get('/api/listings', async (req, res) => {
   try {
     // Only return approved listings that are NOT sold or rented
-    const listings = await Listing.find({ status: 'approved' }).sort({ createdAt: -1 });
-    res.json(listings);
+    const listings = await Listing.find({ status: 'approved' }).sort({ createdAt: -1 }).lean();
+    
+    // Enrich with seller stats
+    const enriched = await Promise.all(listings.map(async (item) => {
+      const email = item.sellerId;
+      const reviews = await Review.find({ sellerId: email });
+      const totalReviews = reviews.length;
+      const avgRating = totalReviews > 0 
+        ? Math.round((reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews) * 10) / 10 
+        : 0;
+
+      const salesCount = await Order.countDocuments({ 
+        sellerId: email, 
+        status: { $in: ['delivered', 'released', 'paid'] } 
+      });
+
+      return {
+        ...item,
+        sellerStats: {
+          avgRating,
+          totalReviews,
+          salesCount,
+          isVerified: salesCount >= 5 && avgRating >= 4.0
+        }
+      };
+    }));
+
+    res.json(enriched);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -620,6 +646,39 @@ app.get('/api/reviews/seller/:email', async (req, res) => {
   try {
     const reviews = await Review.find({ sellerId: req.params.email }).sort({ createdAt: -1 });
     res.json(reviews);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET seller reputation profile
+app.get('/api/seller/profile/:email', async (req, res) => {
+  try {
+    const email = req.params.email;
+    
+    // 1. Aggregate reviews
+    const reviews = await Review.find({ sellerId: email });
+    const totalReviews = reviews.length;
+    const avgRating = totalReviews > 0 
+      ? Math.round((reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews) * 10) / 10 
+      : 0;
+
+    // 2. Count successful sales (delivered/released/paid)
+    const salesCount = await Order.countDocuments({ 
+      sellerId: email, 
+      status: { $in: ['delivered', 'released', 'paid'] } 
+    });
+
+    // 3. Verification Logic
+    const isVerified = salesCount >= 5 && avgRating >= 4.0;
+
+    res.json({
+      avgRating,
+      totalReviews,
+      salesCount,
+      isVerified,
+      joinedDate: '2024-01-01' // Placeholder for now, can be extracted from first listing if needed
+    });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

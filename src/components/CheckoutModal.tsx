@@ -439,12 +439,48 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
 
               {/* REVIEWS SECTION */}
               <div className="mt-12 pt-12 border-t border-gray-200">
-                <div className="flex items-center justify-between mb-8">
-                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-brand-primary/30">User Reviews.</h3>
-                  <div className="flex items-center gap-1 bg-brand-accent/10 px-3 py-1 rounded-full">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-brand-primary/30">Honest Trust.</h3>
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-brand-primary/5 rounded-full border border-brand-primary/10">
                     <Star className="w-3 h-3 fill-brand-accent text-brand-accent" />
-                    <span className="text-[10px] font-bold text-brand-accent">{product.rating || '5.0'}</span>
+                    <span className="text-[10px] font-bold text-brand-primary">
+                      {product.rating > 0 ? `${product.rating} (Listing)` : 'No Reviews Yet'}
+                    </span>
                   </div>
+                </div>
+
+                {/* Seller Trust Profile */}
+                <div className="bg-brand-primary/5 rounded-3xl p-6 border border-brand-primary/10 mb-8 relative overflow-hidden group">
+                   <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                      <ShieldCheck className="w-12 h-12" />
+                   </div>
+                   <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-3">
+                         <span className="text-[10px] font-bold uppercase tracking-widest text-brand-accent">Seller Reputation</span>
+                         {product.sellerStats?.isVerified && (
+                           <div className="flex items-center gap-1 px-2 py-0.5 bg-brand-accent text-brand-primary rounded text-[8px] font-black uppercase">
+                              Verified
+                           </div>
+                         )}
+                      </div>
+                      <div className="flex items-baseline gap-2 mb-1">
+                         <span className="text-3xl font-display font-bold">{product.sellerStats?.avgRating || '0.0'}</span>
+                         <span className="text-sm font-bold text-brand-primary/40">★ Seller Score</span>
+                      </div>
+                      <p className="text-[11px] font-medium text-brand-primary/60 leading-relaxed mb-4">
+                         {product.sellerStats?.salesCount || 0} Successful Transactions Completed.
+                      </p>
+                      
+                      <div className="p-3 bg-white/50 rounded-xl border border-brand-primary/5">
+                         <p className="text-[9px] font-bold text-brand-primary/30 uppercase tracking-tighter leading-snug">
+                            "This product is unique and has no reviews yet. You can trust this seller based on their proven track record across all past listings."
+                         </p>
+                      </div>
+                   </div>
+                </div>
+
+                <div className="flex items-center justify-between mb-8">
+                  <h3 className="text-sm font-bold uppercase tracking-[0.3em] text-brand-primary/30">Past Feedback.</h3>
                 </div>
 
                 <div className="max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
