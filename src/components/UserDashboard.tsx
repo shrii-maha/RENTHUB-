@@ -22,6 +22,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
   const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
   const [userListings, setUserListings] = useState<Product[]>([]);
   const [receiptData, setReceiptData] = useState<any>(null);
+  const [requestingPayout, setRequestingPayout] = useState(false);
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
   const userEmail = user?.primaryEmailAddress?.emailAddress;
@@ -87,8 +88,6 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
       lifetimePaid += netPayout;
     }
   });
-
-  const [requestingPayout, setRequestingPayout] = useState(false);
 
   const handleWithdrawRequest = async () => {
     if (availableBalance <= 0) return;
