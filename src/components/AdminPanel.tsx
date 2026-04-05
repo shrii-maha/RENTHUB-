@@ -438,7 +438,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     </div>
                     
                     <div className="bg-white border border-gray-100 rounded-[24px] overflow-hidden shadow-sm">
-                      <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[75vh] custom-scrollbar">
                         <table className="w-full border-collapse text-left whitespace-nowrap min-w-[700px]">
                           <thead>
                             <tr className="bg-gray-50/80 border-b border-gray-100">
@@ -482,8 +482,9 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                         </div>
                                       )}
                                   </td>
-                                  <td className="p-6 font-extrabold text-brand-accent text-lg drop-shadow-sm">
-                                      ⭐ {usr.avgRating ? usr.avgRating.toFixed(1) : "5.0"}
+                                  <td className="p-6 font-extrabold text-brand-accent text-[18px] drop-shadow-sm flex items-center gap-2 mt-4">
+                                      <Star className={`w-5 h-5 ${usr.avgRating > 0 ? 'fill-brand-accent text-brand-accent' : 'text-gray-200'}`} />
+                                      {usr.avgRating ? usr.avgRating.toFixed(1) : "0.0"}
                                   </td>
                                   <td className="p-6 text-right">
                                       <button className="px-5 py-2.5 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100 rounded-xl font-bold text-xs cursor-pointer shadow-sm transition-all active:scale-95 text-center inline-block">Suspend</button>

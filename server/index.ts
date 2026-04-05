@@ -687,34 +687,40 @@ app.get('/api/seller/profile/:email', async (req, res) => {
 // GET active sellers (Users Directory)
 app.get('/api/admin/users', async (_req, res) => {
   try {
-    const sellerStats = await Listing.aggregate([
-      {
-        $group: {
-          _id: "$sellerId",
-          totalListings: { $sum: 1 },
-          avgRating: { $avg: "$rating" }
-        }
-      }
+    // 1. Get listing counts per seller
+    const listingStats = await Listing.aggregate([
+      { $group: { _id: "$sellerId", totalListings: { $sum: 1 } } }
+    ]);
+
+    // 2. Get ACTUAL average ratings from Reviews
+    const reviewStats = await Review.aggregate([
+      { $group: { _id: "$sellerId", avgRating: { $avg: "$rating" }, totalReviews: { $sum: 1 } } }
     ]);
 
     const realUsers = await User.find().lean();
-
+    
+    // 3. Merge all data sources
     const mergedUsers = realUsers.map(u => {
-      const stats = sellerStats.find(s => s._id === u.clerkId || s._id === u.email);
+      const lStats = listingStats.find(s => s._id === u.clerkId || s._id === u.email);
+      const rStats = reviewStats.find(r => r._id === u.clerkId || r._id === u.email);
+      
       return {
         _id: u._id,
         email: u.email,
         fullName: u.fullName,
         clerkId: u.clerkId,
         lastActive: u.lastActiveAt,
-        totalListings: stats ? stats.totalListings : 0,
-        avgRating: stats && stats.avgRating ? Math.round(stats.avgRating * 10) / 10 : null
+        totalListings: lStats ? lStats.totalListings : 0,
+        avgRating: rStats ? Math.round(rStats.avgRating * 10) / 10 : null,
+        totalReviews: rStats ? rStats.totalReviews : 0
       };
     });
 
-    sellerStats.forEach(stats => {
+    // Add sellers that might not be in the 'User' model yet (legacy or admin items)
+    listingStats.forEach(stats => {
       const exists = mergedUsers.find(u => u.clerkId === stats._id || u.email === stats._id);
       if (!exists) {
+        const rStats = reviewStats.find(r => r._id === stats._id);
         mergedUsers.push({
           _id: stats._id,
           email: stats._id,
@@ -722,7 +728,8 @@ app.get('/api/admin/users', async (_req, res) => {
           clerkId: stats._id,
           lastActive: null,
           totalListings: stats.totalListings,
-          avgRating: stats.avgRating ? Math.round(stats.avgRating * 10) / 10 : null
+          avgRating: rStats ? Math.round(rStats.avgRating * 10) / 10 : null,
+          totalReviews: rStats ? rStats.totalReviews : 0
         });
       }
     });
