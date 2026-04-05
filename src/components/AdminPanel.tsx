@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle } from "lucide-react";
+import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle, Star } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useUser } from "@clerk/clerk-react";
 import EditListingModal from "./EditListingModal";
