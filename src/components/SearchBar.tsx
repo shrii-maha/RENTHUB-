@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 
 interface SearchBarProps {
   onSearch: (filters: { location: string; dates: string; category: string }) => void;
+  onDropdownToggle?: (isOpen: boolean) => void;
 }
 
 const LOCATIONS = [
@@ -25,7 +26,7 @@ const MONTH_NAMES = [
 
 type DropdownId = 'location' | 'date' | 'category' | null;
 
-export default function SearchBar({ onSearch }: SearchBarProps) {
+export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps) {
   const [openDropdown, setOpenDropdown] = useState<DropdownId>(null);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -42,8 +43,10 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   );
 
   const toggleDropdown = (id: DropdownId) => {
-    setOpenDropdown(prev => prev === id ? null : id);
-    if (id === 'location') {
+    const next = openDropdown === id ? null : id;
+    setOpenDropdown(next);
+    if (onDropdownToggle) onDropdownToggle(!!next);
+    if (id === 'location' && next) {
       setTimeout(() => locationInputRef.current?.focus(), 50);
     }
   };
@@ -53,27 +56,35 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setOpenDropdown(null);
+        if (onDropdownToggle) onDropdownToggle(false);
       }
     };
     document.addEventListener('click', handler);
     return () => document.removeEventListener('click', handler);
-  }, []);
+  }, [onDropdownToggle]);
 
   const selectLocation = (loc: string) => {
     setSelectedLocation(loc);
     setOpenDropdown(null);
-    setTimeout(() => setOpenDropdown('date'), 120);
+    setTimeout(() => {
+      setOpenDropdown('date');
+      if (onDropdownToggle) onDropdownToggle(true);
+    }, 120);
   };
 
   const pickDate = (dateStr: string) => {
     setSelectedDate(dateStr);
     setOpenDropdown(null);
-    setTimeout(() => setOpenDropdown('category'), 120);
+    setTimeout(() => {
+      setOpenDropdown('category');
+      if (onDropdownToggle) onDropdownToggle(true);
+    }, 120);
   };
 
   const selectCategory = (cat: string) => {
     setSelectedCategory(cat);
     setOpenDropdown(null);
+    if (onDropdownToggle) onDropdownToggle(false);
   };
 
   const changeMonth = (dir: number) => {

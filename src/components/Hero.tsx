@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
 import SearchBar from "./SearchBar";
 
 interface HeroProps {
@@ -6,6 +7,8 @@ interface HeroProps {
 }
 
 export default function Hero({ onSearch }: HeroProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center pt-20">
       {/* Background Image with Overlay */}
@@ -41,14 +44,27 @@ export default function Hero({ onSearch }: HeroProps) {
           className="flex justify-center"
           style={{ position: 'relative', zIndex: 50 }}
         >
-          <SearchBar onSearch={onSearch || (() => {})} />
+          <SearchBar 
+            onSearch={onSearch || (() => {})} 
+            onDropdownToggle={(open) => setIsDropdownOpen(open)}
+          />
         </motion.div>
       </div>
 
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1">
-        <p className="text-[8px] font-mono uppercase tracking-[0.4em] text-brand-primary/20">Scroll to explore</p>
-        <div className="w-px h-10 bg-gradient-to-b from-brand-primary/20 to-transparent"></div>
-      </div>
+      <AnimatePresence>
+        {!isDropdownOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.3 }}
+            className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
+          >
+            <p className="text-[8px] font-mono uppercase tracking-[0.4em] text-brand-primary/60 font-bold">Scroll to explore</p>
+            <div className="w-px h-10 bg-gradient-to-b from-brand-primary/50 to-transparent"></div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
