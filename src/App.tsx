@@ -157,7 +157,7 @@ export default function App() {
   }, [activeSection]);
 
   return (
-    <div className="relative min-h-screen bg-white selection:bg-brand-accent selection:text-white">
+    <div className="relative min-h-screen bg-white">
       <motion.div
         className="fixed top-0 left-0 right-0 h-1 bg-brand-accent z-[60] origin-left"
         style={{ scaleX }}
