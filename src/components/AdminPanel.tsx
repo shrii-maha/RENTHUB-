@@ -438,7 +438,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     </div>
                     
                     <div className="bg-white border border-gray-100 rounded-[24px] overflow-hidden shadow-sm">
-                      <div className="overflow-x-auto">
+                      <div className="overflow-x-auto overflow-y-auto max-h-[600px] custom-scrollbar">
                         <table className="w-full border-collapse text-left whitespace-nowrap min-w-[700px]">
                           <thead>
                             <tr className="bg-gray-50/80 border-b border-gray-100">
