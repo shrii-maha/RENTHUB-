@@ -5,7 +5,7 @@ export interface IOrder extends Document {
   buyerId: string;
   sellerId: string;
   amount: number;
-  status: 'escrow' | 'shipped' | 'delivered' | 'released' | 'refunded';
+  status: 'escrow' | 'shipped' | 'delivered' | 'released' | 'payout_requested' | 'paid' | 'refunded';
   paymentMethod: 'card' | 'upi';
   trackingNumber?: string;
   shippingNote?: string;
@@ -19,7 +19,7 @@ const OrderSchema = new Schema<IOrder>({
   buyerId: { type: String, required: true },
   sellerId: { type: String, required: true },
   amount: { type: Number, required: true },
-  status: { type: String, enum: ['escrow', 'shipped', 'delivered', 'released', 'refunded'], default: 'escrow' },
+  status: { type: String, enum: ['escrow', 'shipped', 'delivered', 'released', 'payout_requested', 'paid', 'refunded'], default: 'escrow' },
   paymentMethod: { type: String, enum: ['card', 'upi'], required: true },
   trackingNumber: { type: String },
   shippingNote: { type: String },

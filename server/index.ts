@@ -437,6 +437,50 @@ app.patch('/api/admin/orders/:id/release', async (req, res) => {
   }
 });
 
+// REQUEST withdrawal from seller
+app.post('/api/payouts/request/:email', async (req, res) => {
+  try {
+    const result = await Order.updateMany(
+      { sellerId: req.params.email, status: 'released' },
+      { status: 'payout_requested' }
+    );
+    
+    if (result.modifiedCount > 0) {
+      const activity = new ActivityLog({
+        actionType: 'payout',
+        message: 'Withdrawal Requested',
+        details: `Seller ${req.params.email} requested payout for ${result.modifiedCount} items.`
+      });
+      await activity.save();
+    }
+    
+    res.json({ message: `Successfully requested payout for ${result.modifiedCount} items.` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DISBURSE payout from admin
+app.patch('/api/admin/payouts/disburse/:sellerId', async (req, res) => {
+  try {
+    const result = await Order.updateMany(
+      { sellerId: req.params.sellerId, status: 'payout_requested' },
+      { status: 'paid' }
+    );
+    
+    const activity = new ActivityLog({
+      actionType: 'payout',
+      message: 'Payout Disbursed',
+      details: `Completed payment of ${result.modifiedCount} items to seller ${req.params.sellerId}`
+    });
+    await activity.save();
+    
+    res.json({ message: `✅ Successfully disbursed ${result.modifiedCount} payouts.` });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // RELEASE ALL payouts
 app.post('/api/admin/orders/release-all', async (_req, res) => {
   try {

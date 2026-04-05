@@ -68,6 +68,8 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
   // Calculate Real Earnings from Orders
   let availableBalance = 0;
   let pendingEarnings = 0;
+  let processingBalance = 0;
+  let lifetimePaid = 0;
 
   orders.forEach(order => {
     const listing = order.listingId;
@@ -75,15 +77,34 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
     const basePrice = parseInt(listing.price.replace(/[^\d]/g, '')) || 0;
     const netPayout = listing.type === 'Sale' ? basePrice * 0.95 : basePrice * 0.85;
     
-    if (order.status === 'escrow') {
+    if (order.status === 'escrow' || order.status === 'shipped') {
       pendingEarnings += netPayout;
     } else if (order.status === 'released') {
       availableBalance += netPayout;
+    } else if (order.status === 'payout_requested') {
+      processingBalance += netPayout;
+    } else if (order.status === 'paid') {
+      lifetimePaid += netPayout;
     }
   });
 
-  const rawEarnings = availableBalance + pendingEarnings;
-  const totalPaidOut = availableBalance;
+  const [requestingPayout, setRequestingPayout] = useState(false);
+
+  const handleWithdrawRequest = async () => {
+    if (availableBalance <= 0) return;
+    setRequestingPayout(true);
+    try {
+      const res = await fetch(`/api/payouts/request/${userEmail}`, { method: 'POST' });
+      if (res.ok) {
+        // Optimistically update orders or refetch
+        setOrders(prev => prev.map(o => o.status === 'released' ? { ...o, status: 'payout_requested' } : o));
+      }
+    } finally {
+      setRequestingPayout(false);
+    }
+  };
+
+  const rawEarnings = availableBalance + pendingEarnings + processingBalance + lifetimePaid;
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -189,7 +210,14 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
 
                   {activeTab === 'earnings' && (
                     <motion.div key="earnings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <EarningsSummary balance={availableBalance} pending={pendingEarnings} totalPaid={totalPaidOut} />
+                      <EarningsSummary 
+                        balance={availableBalance} 
+                        pending={pendingEarnings} 
+                        totalPaid={lifetimePaid} 
+                        processing={processingBalance}
+                        onWithdraw={() => handleWithdrawRequest()}
+                        isRequesting={requestingPayout}
+                      />
                       <TransactionHistory orders={orders} setOrders={setOrders} />
                     </motion.div>
                   )}
@@ -260,16 +288,31 @@ function StatCard({ label, value, sub, subColor }: { label: string, value: strin
   );
 }
 
-function EarningsSummary({ balance, pending, totalPaid }: { balance: number, pending: number, totalPaid: number }) {
+function EarningsSummary({ balance, pending, totalPaid, processing, onWithdraw, isRequesting }: { balance: number, pending: number, totalPaid: number, processing: number, onWithdraw: () => void, isRequesting: boolean }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
       <div className="md:col-span-1.5 bg-black text-white p-10 rounded-[2.8rem] shadow-2xl shadow-black/20 relative overflow-hidden group">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand-accent/5 blur-[80px] rounded-full -translate-y-1/2 translate-x-1/2 group-hover:bg-brand-accent/10 transition-all duration-700" />
-        <span className="text-[10px] font-extrabold uppercase tracking-[0.4em] text-white/30">Available for Payout</span>
-        <div className="text-5xl font-display font-bold mt-6 tracking-tighter italic">₹{balance.toLocaleString()}.00</div>
+        <div className="flex justify-between items-start">
+          <div>
+            <span className="text-[10px] font-extrabold uppercase tracking-[0.4em] text-white/30">Available for Payout</span>
+            <div className="text-5xl font-display font-bold mt-6 tracking-tighter italic">₹{balance.toLocaleString()}.00</div>
+          </div>
+          {balance > 0 && (
+            <button 
+              onClick={onWithdraw}
+              disabled={isRequesting}
+              className="px-6 py-3 bg-brand-accent text-brand-primary rounded-xl font-bold text-xs uppercase tracking-widest hover:scale-105 transition-all disabled:opacity-50 shadow-lg shadow-brand-accent/20"
+            >
+              {isRequesting ? 'Processing...' : 'Withdraw Now'}
+            </button>
+          )}
+        </div>
         <div className="mt-8 flex items-center gap-3">
-           <div className="w-2 h-2 bg-brand-accent rounded-full animate-ping" />
-           <span className="text-brand-accent text-[11px] font-bold uppercase tracking-widest">Live Balance</span>
+           <div className={`w-2 h-2 ${balance > 0 ? 'bg-brand-accent animate-ping' : 'bg-white/20'} rounded-full`} />
+           <span className="text-white/40 text-[11px] font-bold uppercase tracking-widest">
+             {processing > 0 ? `₹${processing.toLocaleString()} currently processing` : 'Live Balance'}
+           </span>
         </div>
       </div>
       
@@ -330,12 +373,18 @@ function TransactionHistory({ orders, setOrders }: { orders: any[], setOrders: R
                 <div className="flex-1">
                     <div className="flex justify-between items-start mb-1">
                       <h4 className="text-[17px] font-bold text-black group-hover:text-brand-accent transition-colors truncate">{title}</h4>
-                      <span className={`text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest ${
-                        order.status === 'escrow' ? 'bg-orange-50 text-orange-500 border border-orange-100' :
-                        order.status === 'shipped' ? 'bg-blue-50 text-blue-500 border border-blue-100' :
-                        'bg-green-50 text-green-500 border border-green-100'
+                      <span className={`text-[9px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest border ${
+                        order.status === 'escrow' ? 'bg-orange-50 text-orange-500 border-orange-100' :
+                        order.status === 'shipped' ? 'bg-blue-50 text-blue-500 border-blue-100' :
+                        order.status === 'payout_requested' ? 'bg-amber-50 text-amber-500 border-amber-100 animate-pulse' :
+                        order.status === 'paid' ? 'bg-emerald-50 text-emerald-500 border-emerald-100' :
+                        'bg-green-50 text-green-500 border-green-100'
                       }`}>
-                        {order.status === 'escrow' ? 'Held in Escrow' : order.status === 'shipped' ? '🚚 Shipped' : '✅ Released'}
+                        {order.status === 'escrow' ? 'Held in Escrow' : 
+                         order.status === 'shipped' ? '🚚 Shipped' : 
+                         order.status === 'payout_requested' ? '⏳ Payout Processing' :
+                         order.status === 'paid' ? '💰 Payout Completed' :
+                         '✅ Released'}
                       </span>
                     </div>
                     <div className="text-[10px] text-gray-400 font-mono font-bold uppercase tracking-widest flex items-center gap-2">

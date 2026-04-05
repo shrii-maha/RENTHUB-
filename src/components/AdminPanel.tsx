@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink } from "lucide-react";
+import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useUser } from "@clerk/clerk-react";
 import EditListingModal from "./EditListingModal";
@@ -81,11 +81,25 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         method: 'PATCH'
       });
       if (res.ok) {
-        setPayouts(prev => prev.filter(p => p._id !== id));
+        setPayouts(prev => prev.map(p => p._id === id ? { ...p, status: 'released' } : p));
         fetchAdminData();
       }
     } catch (err) {
       console.error("Failed to release payout", err);
+    }
+  };
+
+  const disbursePayout = async (sellerId: string) => {
+    try {
+      const res = await fetch(`/api/admin/payouts/disburse/${sellerId}`, {
+        method: 'PATCH'
+      });
+      if (res.ok) {
+        setPayouts(prev => prev.map(p => p.sellerId === sellerId && p.status === 'payout_requested' ? { ...p, status: 'paid' } : p));
+        fetchAdminData();
+      }
+    } catch (err) {
+      console.error("Failed to disburse payout", err);
     }
   };
 
@@ -499,19 +513,76 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                       </div>
                       <button 
                         onClick={releaseAllPayouts}
-                        disabled={payouts.filter(p => p.status === 'escrow').length === 0}
+                        disabled={payouts.filter(p => ['escrow', 'shipped'].includes(p.status)).length === 0}
                         className="mt-8 md:mt-0 px-10 py-5 bg-brand-accent text-black rounded-2xl font-extrabold text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl shadow-brand-accent/20 relative z-10 disabled:opacity-50 disabled:grayscale disabled:scale-100"
                       >
-                        Process All Batches
+                        Release All Escrow
                       </button>
                     </div>
 
-                    <h3 className="text-2xl font-extrabold text-black tracking-tight mb-8">Ready for Payout</h3>
+                    {/* NEW SECTION: WITHDRAWAL REQUESTS */}
+                    <div className="mb-16">
+                        <div className="flex items-center gap-3 mb-8">
+                            <div className="w-10 h-10 bg-amber-100 rounded-2xl flex items-center justify-center">
+                                <Wallet className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <h3 className="text-2xl font-extrabold text-black tracking-tight">Withdrawal Requests</h3>
+                        </div>
+
+                        {payouts.filter(p => p.status === 'payout_requested').length === 0 ? (
+                           <div className="bg-gray-50/50 border-2 border-dashed border-gray-100 rounded-[2.5rem] p-12 text-center">
+                               <p className="text-sm font-bold text-gray-400 italic">No active withdrawal requests from sellers.</p>
+                           </div>
+                        ) : (
+                            <div className="grid grid-cols-1 gap-5">
+                                {Object.entries(
+                                    payouts.filter(p => p.status === 'payout_requested').reduce((acc: any, order) => {
+                                        if (!acc[order.sellerId]) acc[order.sellerId] = { orders: [], total: 0 };
+                                        const basePrice = parseInt(order.listingId?.price?.replace(/[^\d]/g, '')) || 0;
+                                        const netPayout = order.listingId?.type === 'Sale' ? basePrice * 0.95 : basePrice * 0.85;
+                                        acc[order.sellerId].orders.push(order);
+                                        acc[order.sellerId].total += netPayout;
+                                        return acc;
+                                    }, {})
+                                ).map(([sellerId, data]: [string, any]) => (
+                                    <div key={sellerId} className="bg-white border-2 border-black rounded-[2.5rem] p-8 flex flex-col md:flex-row items-center justify-between gap-8 shadow-xl">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-16 h-16 bg-black text-white rounded-3xl flex items-center justify-center font-bold text-xl uppercase italic shadow-lg shrink-0">
+                                                {sellerId.charAt(0)}
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-xs font-mono font-extrabold text-amber-500 uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full">Request Pending</span>
+                                                    <span className="text-gray-400 font-mono text-[10px] uppercase font-bold">• {data.orders.length} items grouped</span>
+                                                </div>
+                                                <h4 className="text-xl font-bold text-black truncate max-w-xs">{sellerId}</h4>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-10">
+                                            <div className="text-right">
+                                                <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest block mb-1">Total to Disburse</span>
+                                                <div className="text-3xl font-display font-black text-black">₹{Math.floor(data.total).toLocaleString()}</div>
+                                            </div>
+                                            <button 
+                                                onClick={() => disbursePayout(sellerId)}
+                                                className="px-10 py-5 bg-green-600 text-white hover:bg-green-700 rounded-2xl font-extrabold text-sm transition-all shadow-xl shadow-green-600/20 active:scale-95 flex items-center gap-3 border-none cursor-pointer"
+                                            >
+                                                <CheckCircle className="w-5 h-5" /> Process Disburse
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <h3 className="text-2xl font-extrabold text-black tracking-tight mb-8">Held in Escrow (Unreleased)</h3>
                     
                     <div className="flex flex-col gap-4 mb-16">
                       {isLoading ? (
                         <div className="text-sm text-gray-400 mx-auto py-10 font-bold animate-pulse">Scanning ledger...</div>
-                      ) : payouts.filter(p => p.status === 'escrow').length === 0 ? (
+                      ) : payouts.filter(p => ['escrow', 'shipped'].includes(p.status)).length === 0 ? (
                         <div className="bg-gray-50/50 border-2 border-dashed border-gray-100 rounded-[2rem] p-16 text-center">
                           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-gray-100">
                             <Wallet className="w-10 h-10 text-gray-200" />
@@ -519,7 +590,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                           <h4 className="text-lg font-bold text-gray-400">Escrow is currently empty.</h4>
                           <p className="text-xs text-gray-400 mt-1 uppercase font-bold tracking-widest">Awaiting new marketplace transactions</p>
                         </div>
-                      ) : payouts.filter(p => p.status === 'escrow').map((payout) => (
+                      ) : payouts.filter(p => ['escrow', 'shipped'].includes(p.status)).map((payout) => (
                         <div key={payout._id} className="bg-white border border-gray-100 rounded-[2rem] p-6 pr-8 flex flex-col md:flex-row items-center justify-between gap-6 hover:shadow-lg transition-all group">
                           <div className="flex items-center gap-6 w-full md:w-auto">
                             <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center overflow-hidden shrink-0 border border-gray-100 group-hover:rotate-2 transition-transform">
