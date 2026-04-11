@@ -286,6 +286,7 @@ export default function App() {
         )}
 
         {activeSection === 'items' && (
+          <Marketplace 
             listings={listings} 
             searchFilters={searchFilters} 
             onProductSelect={handleProductSelect}
@@ -336,6 +337,9 @@ export default function App() {
         onDelete={handleDeleteListing}
       />
 
+      <UserDashboard 
+        isOpen={isDashboardOpen} 
+        onClose={() => setIsDashboardOpen(false)} 
         listings={listings}
         onOpenSell={() => {
           if (!isSignedIn) {

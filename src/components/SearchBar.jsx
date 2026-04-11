@@ -141,7 +141,6 @@ export default function SearchBar({ onSearch, onDropdownToggle }) {
       fontSize: '9.5px', fontWeight: 600, letterSpacing: '0.1em',
       textTransform: 'uppercase', color: '#D4900A', marginBottom: 3, display: 'block',
     },
-    fieldInner: { display: 'flex', alignItems: 'flex-start', gap: '10px' },
     dropdown: {
       position: 'absolute', top: 'calc(100% + 12px)', left: 0,
       background: '#fff', borderRadius: '16px',

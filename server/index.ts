@@ -34,7 +34,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*", // Adjust for production security if needed
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
@@ -101,35 +101,23 @@ app.get('/api/health', (_req, res) => {
 
 // ─── SOCKET.IO CHAT LOGIC ────────────────────────────
 io.on('connection', (socket) => {
-  console.log('🔌 New Client Connected:', socket.id);
-
   socket.on('join_session', (sessionId) => {
     socket.join(sessionId);
-    console.log(`👤 User joined session: ${sessionId}`);
   });
 
   socket.on('send_message', async (data) => {
     const { sessionId, senderId, text } = data;
     try {
-      // Save message to DB
       const message = new ChatMessage({ sessionId, senderId, text });
       await message.save();
-
-      // Update session last message
       await ChatSession.findByIdAndUpdate(sessionId, {
         lastMessage: text,
         lastMessageAt: new Date()
       });
-
-      // Broadcast to everyone in the room (including sender)
       io.to(sessionId).emit('new_message', message);
     } catch (err) {
-      console.error('❌ Socket Message Error:', err);
+      console.error('❌ Socket Error:', err);
     }
-  });
-
-  socket.on('disconnect', () => {
-    console.log('🔌 Client Disconnected');
   });
 });
 
@@ -782,6 +770,67 @@ app.get('/api/admin/users', async (_req, res) => {
 
     mergedUsers.sort((a, b) => {
        if (a.lastActive && b.lastActive) return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
+       if (a.lastActive) return -1;
+       if (b.lastActive) return 1;
+       return b.totalListings - a.totalListings;
+    });
+
+    res.json(mergedUsers);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── CHAT ROUTES ──────────────────────────────────────
+
+app.post('/api/chat/sessions', async (req, res) => {
+  try {
+    const { participants, listingId } = req.body;
+    let session = await ChatSession.findOne({ participants: { $all: participants }, listingId: listingId || null });
+    if (!session) {
+      session = new ChatSession({ participants, listingId });
+      await session.save();
+    }
+    res.json(session);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/chat/sessions/user/:clerkId', async (req, res) => {
+  try {
+    const sessions = await ChatSession.find({ participants: req.params.clerkId })
+      .sort({ lastMessageAt: -1 }).populate('listingId').lean();
+    res.json(sessions);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/chat/messages/:sessionId', async (req, res) => {
+  try {
+    const messages = await ChatMessage.find({ sessionId: req.params.sessionId }).sort({ createdAt: 1 });
+    res.json(messages);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/chat/messages/:sessionId/read', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    await ChatMessage.updateMany({ sessionId: req.params.sessionId, senderId: { $ne: userId }, isRead: false }, { isRead: true });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// PUT update listing (full metadata edit)
+app.put('/api/listings/:id', async (req, res) => {
+  try {
+    const listing = await Listing.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
     
     // Log Administrative Edit
     const activity = new ActivityLog({
@@ -898,12 +947,8 @@ app.post('/api/admin/repair-paths', async (_req, res) => {
   }
 });
 
-// Health check
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected' });
-});
 
 // Start server
-httpServer.listen(PORT, () => {
+httpServer.listen(Number(PORT), "0.0.0.0", () => {
   console.log(`🚀 RentHub API & Real-time Server running on port ${PORT}`);
 });
