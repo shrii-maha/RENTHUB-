@@ -21,7 +21,11 @@ export const SocketProvider = ({ children }) => {
     }
 
     // Connect to the backend
-    const socketUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    // Auto-detect production backend from Render if on Vercel
+    const productionUrl = 'https://renthub-backend-ni16.onrender.com';
+    const socketUrl = import.meta.env.VITE_API_URL || 
+                      (window.location.hostname.includes('vercel.app') ? productionUrl : 'http://localhost:3001');
+                      
     const newSocket = io(socketUrl);
 
     newSocket.on('connect', () => {

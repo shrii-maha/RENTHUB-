@@ -174,8 +174,12 @@ export default function App() {
       return;
     }
     
+    // Open dashboard immediately for responsiveness
+    setDashboardTab('messages');
+    setIsDashboardOpen(true);
+    
     try {
-      // Create session
+      // Create session in background
       await fetch('/api/chat/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -184,11 +188,8 @@ export default function App() {
           listingId
         })
       });
-      
-      setDashboardTab('messages');
-      setIsDashboardOpen(true);
     } catch (err) {
-      console.error('Failed to open chat', err);
+      console.error('Background session creation failed:', err);
     }
   };
 
