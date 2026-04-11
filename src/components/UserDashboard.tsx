@@ -1,21 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star } from "lucide-react";
+import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare } from "lucide-react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
 import ReceiptModal from "./ReceiptModal";
 import ReviewModal from "./ReviewModal";
+import ChatInbox from "./ChatInbox";
 
 interface UserDashboardProps {
   isOpen: boolean;
   onClose: () => void;
   listings: Product[];
   onOpenSell: () => void;
+  initialTab?: Tab;
 }
 
-type Tab = 'dashboard' | 'listings' | 'purchases' | 'earnings';
+type Tab = 'dashboard' | 'listings' | 'purchases' | 'earnings' | 'messages';
 
-export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }: UserDashboardProps) {
+export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, initialTab }: UserDashboardProps) {
   const { user } = useUser();
   const { signOut } = useClerk();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -63,6 +65,12 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
       }
     }
   }, [isOpen, userEmail, isAdmin, user?.id]);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   if (!user || isAdmin) return null;
 
@@ -164,6 +172,12 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                     active={activeTab === 'earnings'} 
                     onClick={() => handleTabChange('earnings')} 
                   />
+                  <SidebarItem 
+                    icon={<MessageSquare className="w-5 h-5" />} 
+                    label="Messages" 
+                    active={activeTab === 'messages'} 
+                    onClick={() => handleTabChange('messages')} 
+                  />
                 </nav>
               </div>
 
@@ -184,10 +198,10 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
               <div className="p-8 md:p-12 pb-0 flex flex-col md:flex-row justify-between items-start gap-6">
                 <div>
                   <h1 className="text-[34px] font-display font-bold leading-none mb-1 italic tracking-tight text-black">
-                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'purchases' ? 'My Purchases.' : 'Manage Listings.'}
+                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'purchases' ? 'My Purchases.' : activeTab === 'messages' ? 'Direct Messages.' : 'Manage Listings.'}
                   </h1>
                   <p className="text-brand-primary/40 text-xs font-medium tracking-wide">
-                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Items you bought or rented.' : 'Track and manage your marketplace assets.'}
+                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Items you bought or rented.' : activeTab === 'messages' ? 'Chat with buyers and sellers in real-time.' : 'Track and manage your marketplace assets.'}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -241,6 +255,12 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell }:
                           setIsReviewModalOpen(true);
                         }}
                       />
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'messages' && (
+                    <motion.div key="messages" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-full">
+                      <ChatInbox />
                     </motion.div>
                   )}
                 </AnimatePresence>

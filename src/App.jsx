@@ -43,9 +43,8 @@ export default function App() {
   };
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
-  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [dashboardTab, setDashboardTab] = useState('dashboard');
   const [listings, setListings] = useState([]);
   const [searchFilters, setSearchFilters] = useState();
 
@@ -167,6 +166,30 @@ export default function App() {
     setIsCheckoutModalOpen(true);
   };
 
+  const handleOpenChat = async (sellerId, listingId) => {
+    if (!isSignedIn) {
+      openSignIn();
+      return;
+    }
+    
+    try {
+      // Create session
+      await fetch('/api/chat/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          participants: [user.id, sellerId],
+          listingId
+        })
+      });
+      
+      setDashboardTab('messages');
+      setIsDashboardOpen(true);
+    } catch (err) {
+      console.error('Failed to open chat', err);
+    }
+  };
+
   const handleSearch = (filters) => {
     setSearchFilters(filters);
     setActiveSection('items');
@@ -213,7 +236,7 @@ export default function App() {
           <>
             <Hero onSearch={handleSearch} />
             <Categories onCategorySelect={handleCategorySelect} />
-            <FeaturedListings onProductSelect={handleProductSelect} listings={listings} />
+            <FeaturedListings onProductSelect={handleProductSelect} listings={listings} onOpenChat={handleOpenChat} />
             <HowItWorks onOpenSell={() => {
               if (!isSignedIn) {
                 openSignIn();
@@ -263,10 +286,10 @@ export default function App() {
         )}
 
         {activeSection === 'items' && (
-          <Marketplace 
             listings={listings} 
             searchFilters={searchFilters} 
             onProductSelect={handleProductSelect}
+            onOpenChat={handleOpenChat}
           />
         )}
 
@@ -313,9 +336,6 @@ export default function App() {
         onDelete={handleDeleteListing}
       />
 
-      <UserDashboard 
-        isOpen={isDashboardOpen} 
-        onClose={() => setIsDashboardOpen(false)} 
         listings={listings}
         onOpenSell={() => {
           if (!isSignedIn) {
@@ -325,6 +345,7 @@ export default function App() {
           setIsDashboardOpen(false);
           setIsSellModalOpen(true);
         }}
+        initialTab={dashboardTab}
       />
 
       <ChatBot />

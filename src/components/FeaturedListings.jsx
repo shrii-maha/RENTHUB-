@@ -1,7 +1,7 @@
 import { motion } from "motion/react";
-import { Star, MapPin, Heart, ArrowUpRight } from "lucide-react";
+import { Star, MapPin, Heart, ArrowUpRight, MessageSquare } from "lucide-react";
 
-export default function FeaturedListings({ onProductSelect, listings }) {
+export default function FeaturedListings({ onProductSelect, listings, onOpenChat }) {
   // Show the most recent 3 items as "featured" (Only approved ones)
   const featuredDisplay = listings
     .filter(item => item.status === 'approved')
@@ -48,13 +48,22 @@ export default function FeaturedListings({ onProductSelect, listings }) {
                   </span>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
-                  <button 
-                    onClick={() => onProductSelect(item)}
-                    className="w-full py-4 bg-white text-brand-primary rounded-2xl font-bold flex items-center justify-center gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500"
-                  >
-                    <span>{item.type === 'Rent' ? 'Rent Now' : 'Buy Now'}</span>
-                    <ArrowUpRight className="w-5 h-5" />
-                  </button>
+                  <div className="w-full flex flex-col gap-2 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                    <button 
+                      onClick={() => onProductSelect(item)}
+                      className="w-full py-4 bg-white text-brand-primary rounded-2xl font-bold flex items-center justify-center gap-2"
+                    >
+                      <span>{item.type === 'Rent' ? 'Rent Now' : 'Buy Now'}</span>
+                      <ArrowUpRight className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={() => onOpenChat(item.sellerId, item.id)}
+                      className="w-full py-3 bg-brand-accent/90 backdrop-blur-md text-brand-primary rounded-xl font-bold flex items-center justify-center gap-2 text-xs"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      <span>Chat with Seller</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 

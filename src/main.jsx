@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ClerkProvider } from '@clerk/clerk-react';
+import { SocketProvider } from './contexts/SocketContext';
 import App from './App';
 import './index.css';
 
@@ -14,8 +15,10 @@ const rootElement = document.getElementById('root');
 
 createRoot(rootElement).render(
   <StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
-      <App />
-    </ClerkProvider>
+      <ClerkProvider publishableKey={PUBLISHABLE_KEY} afterSignOutUrl="/">
+        <SocketProvider>
+          <App />
+        </SocketProvider>
+      </ClerkProvider>
   </StrictMode>,
 );

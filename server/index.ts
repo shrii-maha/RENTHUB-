@@ -1,4 +1,6 @@
 import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import multer from 'multer';
@@ -15,6 +17,8 @@ import Order from './models/Order.js';
 import User from './models/User.js';
 import Review from './models/Review.js';
 import { GoogleGenAI } from "@google/genai";
+import ChatSession from './models/ChatSession.js';
+import ChatMessage from './models/ChatMessage.js';
 
 dotenv.config();
 
@@ -27,6 +31,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: "*", // Adjust for production security if needed
+    methods: ["GET", "POST"]
+  }
+});
 const PORT = process.env.PORT || 3001;
 
 // Ensure uploads directory exists
@@ -83,7 +94,42 @@ app.get('/api/health', (_req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    db: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    socket: io.engine.clientsCount
+  });
+});
+
+// ─── SOCKET.IO CHAT LOGIC ────────────────────────────
+io.on('connection', (socket) => {
+  console.log('🔌 New Client Connected:', socket.id);
+
+  socket.on('join_session', (sessionId) => {
+    socket.join(sessionId);
+    console.log(`👤 User joined session: ${sessionId}`);
+  });
+
+  socket.on('send_message', async (data) => {
+    const { sessionId, senderId, text } = data;
+    try {
+      // Save message to DB
+      const message = new ChatMessage({ sessionId, senderId, text });
+      await message.save();
+
+      // Update session last message
+      await ChatSession.findByIdAndUpdate(sessionId, {
+        lastMessage: text,
+        lastMessageAt: new Date()
+      });
+
+      // Broadcast to everyone in the room (including sender)
+      io.to(sessionId).emit('new_message', message);
+    } catch (err) {
+      console.error('❌ Socket Message Error:', err);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔌 Client Disconnected');
   });
 });
 
@@ -736,22 +782,6 @@ app.get('/api/admin/users', async (_req, res) => {
 
     mergedUsers.sort((a, b) => {
        if (a.lastActive && b.lastActive) return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
-       if (a.lastActive) return -1;
-       if (b.lastActive) return 1;
-       return b.totalListings - a.totalListings;
-    });
-
-    res.json(mergedUsers);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// PUT update listing (full metadata edit)
-app.put('/api/listings/:id', async (req, res) => {
-  try {
-    const listing = await Listing.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!listing) return res.status(404).json({ error: 'Listing not found' });
     
     // Log Administrative Edit
     const activity = new ActivityLog({
@@ -874,6 +904,6 @@ app.get('/api/health', (_req, res) => {
 });
 
 // Start server
-app.listen(Number(PORT), "0.0.0.0", () => {
-  console.log(`🚀 RentHub API is running on port ${PORT}`);
+httpServer.listen(PORT, () => {
+  console.log(`🚀 RentHub API & Real-time Server running on port ${PORT}`);
 });
