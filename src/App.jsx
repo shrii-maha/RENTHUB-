@@ -18,13 +18,12 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
 import { motion, useScroll, useSpring } from "motion/react";
-import { Product } from "./types";
 import { useUser, useClerk } from "@clerk/clerk-react";
 
 export default function App() {
-  const [activeSection, setActiveSection] = useState<'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery'>('home');
+  const [activeSection, setActiveSection] = useState('home');
   
-  const handleNavigate = (section: string) => {
+  const handleNavigate = (section) => {
     if (section === 'how-it-works') {
       setActiveSection('home');
       setTimeout(() => {
@@ -39,16 +38,16 @@ export default function App() {
         }
       }, 100);
     } else {
-      setActiveSection(section as any);
+      setActiveSection(section);
     }
   };
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [listings, setListings] = useState<Product[]>([]);
-  const [searchFilters, setSearchFilters] = useState<{ location: string; dates: string; category: string } | undefined>();
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [listings, setListings] = useState([]);
+  const [searchFilters, setSearchFilters] = useState();
 
   const { user } = useUser();
 
@@ -90,7 +89,7 @@ export default function App() {
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
-          const mapped = data.map((item: any) => ({
+          const mapped = data.map((item) => ({
             ...item,
             id: item._id || item.id,
           }));
@@ -103,7 +102,7 @@ export default function App() {
       });
   }, []);
 
-  const handleAddListing = async (newItem: Product): Promise<Product> => {
+  const handleAddListing = async (newItem) => {
     console.log('📡 Fetching /api/listings with:', newItem.title);
     
     // Add a 30-second timeout to the request
@@ -141,13 +140,13 @@ export default function App() {
         console.error('❌ Invalid Content-Type:', contentType);
         throw new Error("Invalid response from server. Check your backend terminal (Port 3001).");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('💥 Listing error:', err.message);
       throw err;
     }
   };
 
-  const handleDeleteListing = async (id: string) => {
+  const handleDeleteListing = async (id) => {
     try {
       await fetch(`/api/listings/${id}`, { method: 'DELETE' });
     } catch {
@@ -159,7 +158,7 @@ export default function App() {
   const { isSignedIn } = useUser();
   const { openSignIn } = useClerk();
 
-  const handleProductSelect = (product: Product) => {
+  const handleProductSelect = (product) => {
     if (!isSignedIn) {
       openSignIn();
       return;
@@ -168,17 +167,17 @@ export default function App() {
     setIsCheckoutModalOpen(true);
   };
 
-  const handleSearch = (filters: { location: string; dates: string; category: string }) => {
+  const handleSearch = (filters) => {
     setSearchFilters(filters);
     setActiveSection('items');
   };
 
-  const handleCategorySelect = (category: string) => {
+  const handleCategorySelect = (category) => {
     setSearchFilters({ location: "", dates: "", category });
     setActiveSection('items');
   };
 
-  const handleOrderSuccess = (productId: string) => {
+  const handleOrderSuccess = (productId) => {
     // Remove the product from the current marketplace listings
     setListings(prev => prev.filter(item => item.id !== productId));
   };

@@ -1,16 +1,7 @@
 import { Menu, Shield, LayoutDashboard } from "lucide-react";
 import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/clerk-react";
 
-interface NavbarProps {
-  onOpenSell: () => void;
-  onOpenAdmin: () => void;
-  onNavigate: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery') => void;
-  activeSection: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery';
-  onOpenDashboard: () => void;
-  onCategorySelect: (category: string) => void;
-}
-
-export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, onCategorySelect }: NavbarProps) {
+export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, onCategorySelect }) {
   const { user } = useUser();
   const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
 

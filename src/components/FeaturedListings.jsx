@@ -1,13 +1,7 @@
 import { motion } from "motion/react";
 import { Star, MapPin, Heart, ArrowUpRight } from "lucide-react";
-import { Product } from "../types";
 
-interface FeaturedListingsProps {
-  onProductSelect: (product: Product) => void;
-  listings: Product[];
-}
-
-export default function FeaturedListings({ onProductSelect, listings }: FeaturedListingsProps) {
+export default function FeaturedListings({ onProductSelect, listings }) {
   // Show the most recent 3 items as "featured" (Only approved ones)
   const featuredDisplay = listings
     .filter(item => item.status === 'approved')

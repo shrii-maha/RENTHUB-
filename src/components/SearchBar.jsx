@@ -1,10 +1,5 @@
 import { useState, useEffect, useRef } from "react";
 
-interface SearchBarProps {
-  onSearch: (filters: { location: string; dates: string; category: string }) => void;
-  onDropdownToggle?: (isOpen: boolean) => void;
-}
-
 const LOCATIONS = [
   'All India', 'India', 'Delhi, NCR', 'Mumbai, Maharashtra', 'Bengaluru, Karnataka',
   'Chennai, Tamil Nadu', 'Kolkata, West Bengal', 'Hyderabad, Telangana',
@@ -24,10 +19,8 @@ const MONTH_NAMES = [
   'July','August','September','October','November','December',
 ];
 
-type DropdownId = 'location' | 'date' | 'category' | null;
-
-export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps) {
-  const [openDropdown, setOpenDropdown] = useState<DropdownId>(null);
+export default function SearchBar({ onSearch, onDropdownToggle }) {
+  const [openDropdown, setOpenDropdown] = useState(null);
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
@@ -35,14 +28,14 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
   const now = new Date();
   const [calYear, setCalYear] = useState(now.getFullYear());
   const [calMonth, setCalMonth] = useState(now.getMonth());
-  const containerRef = useRef<HTMLDivElement>(null);
-  const locationInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef(null);
+  const locationInputRef = useRef(null);
 
   const filteredLocations = LOCATIONS.filter(l =>
     l.toLowerCase().includes(locationSearch.toLowerCase())
   );
 
-  const toggleDropdown = (id: DropdownId) => {
+  const toggleDropdown = (id) => {
     const next = openDropdown === id ? null : id;
     setOpenDropdown(next);
     if (onDropdownToggle) onDropdownToggle(!!next);
@@ -53,8 +46,8 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
 
   // Close on outside click
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
         setOpenDropdown(null);
         if (onDropdownToggle) onDropdownToggle(false);
       }
@@ -63,7 +56,7 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
     return () => document.removeEventListener('click', handler);
   }, [onDropdownToggle]);
 
-  const selectLocation = (loc: string) => {
+  const selectLocation = (loc) => {
     setSelectedLocation(loc);
     setOpenDropdown(null);
     setTimeout(() => {
@@ -72,7 +65,7 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
     }, 120);
   };
 
-  const pickDate = (dateStr: string) => {
+  const pickDate = (dateStr) => {
     setSelectedDate(dateStr);
     setOpenDropdown(null);
     setTimeout(() => {
@@ -81,13 +74,13 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
     }, 120);
   };
 
-  const selectCategory = (cat: string) => {
+  const selectCategory = (cat) => {
     setSelectedCategory(cat);
     setOpenDropdown(null);
     if (onDropdownToggle) onDropdownToggle(false);
   };
 
-  const changeMonth = (dir: number) => {
+  const changeMonth = (dir) => {
     let m = calMonth + dir;
     let y = calYear;
     if (m > 11) { m = 0; y++; }
@@ -106,7 +99,7 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const firstDay = new Date(calYear, calMonth, 1).getDay();
   const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
-  const calDays: { day: number | null; dateStr: string; isPast: boolean; isToday: boolean; isSelected: boolean }[] = [];
+  const calDays = [];
   for (let i = 0; i < firstDay; i++) calDays.push({ day: null, dateStr: '', isPast: false, isToday: false, isSelected: false });
   for (let d = 1; d <= daysInMonth; d++) {
     const date = new Date(calYear, calMonth, d);
@@ -120,7 +113,7 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
     });
   }
 
-  const sbStyles: Record<string, React.CSSProperties> = {
+  const sbStyles = {
     searchBar: {
       display: 'flex', alignItems: 'center',
       background: 'rgba(245, 244, 242, 0.96)',
@@ -142,17 +135,18 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
     fieldIcon: { marginTop: 2, flexShrink: 0, color: '#D4900A', width: 16, height: 16 },
     fieldLabel: {
       fontSize: '9.5px', fontWeight: 600, letterSpacing: '0.1em',
-      textTransform: 'uppercase' as const, color: '#888', marginBottom: 3, display: 'block',
+      textTransform: 'uppercase', color: '#888', marginBottom: 3, display: 'block',
     },
     fieldLabelActive: {
       fontSize: '9.5px', fontWeight: 600, letterSpacing: '0.1em',
-      textTransform: 'uppercase' as const, color: '#D4900A', marginBottom: 3, display: 'block',
+      textTransform: 'uppercase', color: '#D4900A', marginBottom: 3, display: 'block',
     },
+    fieldInner: { display: 'flex', alignItems: 'flex-start', gap: '10px' },
     dropdown: {
-      position: 'absolute' as const, top: 'calc(100% + 12px)', left: 0,
+      position: 'absolute', top: 'calc(100% + 12px)', left: 0,
       background: '#fff', borderRadius: '16px',
       boxShadow: '0 12px 48px rgba(0,0,0,0.15)',
-      zIndex: 9999, minWidth: '280px', overflow: 'hidden' as const,
+      zIndex: 9999, minWidth: '280px', overflow: 'hidden',
     },
     submitBtn: {
       width: 52, height: 52, borderRadius: '50%', background: '#1a1a1a',
@@ -310,8 +304,8 @@ export default function SearchBar({ onSearch, onDropdownToggle }: SearchBarProps
       <button
         style={sbStyles.submitBtn}
         onClick={handleSearch}
-        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#D4900A'; }}
-        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#1a1a1a'; }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#D4900A'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = '#1a1a1a'; }}
       >
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>

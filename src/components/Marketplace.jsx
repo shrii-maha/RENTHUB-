@@ -1,13 +1,6 @@
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { Star, MapPin, Heart, ArrowUpRight, Filter, X, ShieldCheck } from "lucide-react";
-import { Product } from "../types";
-
-interface MarketplaceProps {
-  listings: Product[];
-  searchFilters?: { location: string; dates: string; category: string };
-  onProductSelect: (product: Product) => void;
-}
+import { useState } from "react";
+import { motion } from "motion/react";
+import { Star, MapPin, Heart, ArrowUpRight, X, ShieldCheck } from "lucide-react";
 
 // Sub-component for individual listing to handle "Honest Trust" data fetching
 function MarketplaceItem({ 
@@ -16,12 +9,6 @@ function MarketplaceItem({
   onProductSelect, 
   isWishlisted, 
   onToggleWishlist 
-}: { 
-  item: Product; 
-  index: number; 
-  onProductSelect: (p: Product) => void;
-  isWishlisted: boolean;
-  onToggleWishlist: (id: string) => void;
 }) {
   const sellerProfile = item.sellerStats;
 
@@ -126,11 +113,11 @@ function MarketplaceItem({
   );
 }
 
-export default function Marketplace({ listings, searchFilters, onProductSelect }: MarketplaceProps) {
-  const [activeType, setActiveType] = useState<'All' | 'Sale' | 'Rent'>('All');
-  const [wishlist, setWishlist] = useState<string[]>([]);
+export default function Marketplace({ listings, searchFilters, onProductSelect }) {
+  const [activeType, setActiveType] = useState('All');
+  const [wishlist, setWishlist] = useState([]);
 
-  const toggleWishlist = (id: string) => {
+  const toggleWishlist = (id) => {
     setWishlist(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   };
 
@@ -161,7 +148,7 @@ export default function Marketplace({ listings, searchFilters, onProductSelect }
           </div>
 
           <div className="flex items-center gap-2 p-1 bg-brand-muted rounded-full">
-            {(['All', 'Sale', 'Rent'] as const).map(type => (
+            {['All', 'Sale', 'Rent'].map(type => (
               <button
                 key={type}
                 onClick={() => setActiveType(type)}

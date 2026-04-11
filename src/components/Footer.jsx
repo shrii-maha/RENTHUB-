@@ -1,10 +1,6 @@
 import { Instagram, Twitter, Facebook, Youtube, Send } from "lucide-react";
 
-interface FooterProps {
-  onNavigate?: (section: 'home' | 'items' | 'insurance' | 'about' | 'contact' | 'privacy' | 'delivery' | 'how-it-works') => void;
-}
-
-export default function Footer({ onNavigate }: FooterProps) {
+export default function Footer({ onNavigate }) {
   return (
     <footer className="bg-white pt-24 pb-12 px-6 md:px-12 border-t border-brand-primary/5">
       <div className="max-w-7xl mx-auto">
@@ -40,7 +36,7 @@ export default function Footer({ onNavigate }: FooterProps) {
               <li><button onClick={() => onNavigate?.('items')} className="hover:text-brand-accent transition-colors">Browse Listings</button></li>
               <li><a href="#" className="hover:text-brand-accent transition-colors">List an Item</a></li>
               <li><button onClick={() => onNavigate?.('how-it-works')} className="hover:text-brand-accent transition-colors">How it Works</button></li>
-              <li><button onClick={() => onNavigate?.('insurance')} className="hover:text-brand-accent transition-colors text-left">Safety &amp; Trust</button></li>
+              <li><button onClick={() => onNavigate?.('insurance')} className="hover:text-brand-accent transition-colors text-left">Safety & Trust</button></li>
               <li><button onClick={() => onNavigate?.('delivery')} className="hover:text-brand-accent transition-colors text-left">Delivery Policy</button></li>
               <li><button onClick={() => onNavigate?.('insurance')} className="hover:text-brand-accent transition-colors text-left">Insurance Policy</button></li>
             </ul>

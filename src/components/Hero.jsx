@@ -2,11 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import SearchBar from "./SearchBar";
 
-interface HeroProps {
-  onSearch?: (filters: { location: string; dates: string; category: string }) => void;
-}
-
-export default function Hero({ onSearch }: HeroProps) {
+export default function Hero({ onSearch }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (

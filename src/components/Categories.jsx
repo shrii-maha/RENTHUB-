@@ -12,11 +12,7 @@ const categories = [
   { name: "General Items", icon: Package, count: "View listings" },
 ];
 
-interface CategoriesProps {
-  onCategorySelect: (category: string) => void;
-}
-
-export default function Categories({ onCategorySelect }: CategoriesProps) {
+export default function Categories({ onCategorySelect }) {
   return (
     <section className="py-24 px-6 md:px-12 bg-brand-muted/30">
       <div className="max-w-7xl mx-auto">
