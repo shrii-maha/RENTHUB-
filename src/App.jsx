@@ -43,6 +43,8 @@ export default function App() {
   };
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dashboardTab, setDashboardTab] = useState('dashboard');
   const [listings, setListings] = useState([]);
