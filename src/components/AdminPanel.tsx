@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle, Star } from "lucide-react";
+import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle, Star, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useUser } from "@clerk/clerk-react";
 import EditListingModal from "./EditListingModal";
+import ChatInbox from "./ChatInbox";
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -13,7 +14,7 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const { user } = useUser();
-  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts' | 'listings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts' | 'listings' | 'messages'>('overview');
   const [stats, setStats] = useState({ totalEarnings: 0, activeListings: 0, activeRents: 0, totalEscrowVolume: 0 });
   const [pending, setPending] = useState<any[]>([]);
   const [activity, setActivity] = useState<any[]>([]);
@@ -260,6 +261,12 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                     badge={allListings.length.toString()}
                     active={activeTab === 'listings'}
                     onClick={() => setActiveTab('listings')} 
+                  />
+                  <SidebarItem 
+                    icon={<MessageSquare />} 
+                    label="Messages" 
+                    active={activeTab === 'messages'}
+                    onClick={() => setActiveTab('messages')} 
                   />
                 </nav>
 
@@ -764,6 +771,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                         </table>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* MESSAGES TAB */}
+                {activeTab === 'messages' && (
+                  <div className="h-full animate-in fade-in slide-in-from-bottom-4 duration-500 mr-12 md:mr-0">
+                    <ChatInbox />
                   </div>
                 )}
               </div>

@@ -9,8 +9,8 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
-  const { user } = useUser();
-  const scrollRef = useRef(null);
+  const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
+  const chatUserId = isAdmin ? "admin" : user?.id;
 
   useEffect(() => {
     if (!sessionId) return;
@@ -30,7 +30,7 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
         fetch(`/api/chat/messages/${sessionId}/read`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: user.id })
+          body: JSON.stringify({ userId: chatUserId })
         });
       })
       .catch(console.error);
@@ -49,7 +49,7 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
         socket.off('new_message', handleNewMessage);
       }
     };
-  }, [sessionId, socket, user?.id]);
+  }, [sessionId, socket, chatUserId]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -63,7 +63,7 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
 
     socket.emit('send_message', {
       sessionId,
-      senderId: user.id,
+      senderId: chatUserId,
       text: newMessage
     });
 
@@ -99,9 +99,9 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
       </div>
 
       {/* Messages Area */}
-      <div r={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide">
         {messages.map((msg, idx) => {
-          const isMe = msg.senderId === user.id;
+          const isMe = msg.senderId === chatUserId;
           return (
             <motion.div
               key={msg._id || idx}

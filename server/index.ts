@@ -799,9 +799,21 @@ app.post('/api/chat/sessions', async (req, res) => {
 
 app.get('/api/chat/sessions/user/:clerkId', async (req, res) => {
   try {
-    const sessions = await ChatSession.find({ participants: req.params.clerkId })
+    const { clerkId } = req.params;
+    const sessions = await ChatSession.find({ participants: clerkId })
       .sort({ lastMessageAt: -1 }).populate('listingId').lean();
-    res.json(sessions);
+    
+    // Add unread count to each session
+    const sessionsWithUnread = await Promise.all(sessions.map(async (session: any) => {
+      const unreadCount = await ChatMessage.countDocuments({
+        sessionId: session._id,
+        senderId: { $ne: clerkId },
+        isRead: false
+      });
+      return { ...session, unreadCount };
+    }));
+
+    res.json(sessionsWithUnread);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }

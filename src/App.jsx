@@ -17,6 +17,7 @@ import Contact from "./components/Contact";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
+import FloatingChat from "./components/FloatingChat";
 import { motion, useScroll, useSpring } from "motion/react";
 import { useUser, useClerk } from "@clerk/clerk-react";
 
@@ -44,6 +45,7 @@ export default function App() {
   const [isSellModalOpen, setIsSellModalOpen] = useState(false);
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dashboardTab, setDashboardTab] = useState('dashboard');
@@ -174,9 +176,8 @@ export default function App() {
       return;
     }
     
-    // Open dashboard immediately for responsiveness
-    setDashboardTab('messages');
-    setIsDashboardOpen(true);
+    // Open floating chat immediately for responsiveness
+    setIsFloatingChatOpen(true);
     
     try {
       // Create session in background
@@ -353,6 +354,11 @@ export default function App() {
           setIsSellModalOpen(true);
         }}
         initialTab={dashboardTab}
+      />
+
+      <FloatingChat 
+        isOpen={isFloatingChatOpen} 
+        onOpenToggle={setIsFloatingChatOpen} 
       />
 
       <ChatBot />
