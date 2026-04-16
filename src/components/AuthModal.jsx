@@ -168,11 +168,17 @@ export default function AuthModal({ isOpen, onClose }) {
               {/* Social Logins - only for signin/signup */}
               {(mode === 'signin' || mode === 'signup') && (
                 <div className="grid grid-cols-2 gap-3 mb-5">
-                  <button className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group">
+                  <button 
+                    onClick={() => window.location.href = '/api/auth/google'}
+                    className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group"
+                  >
                     <Chrome className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-bold">Google</span>
                   </button>
-                  <button className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group">
+                  <button 
+                    onClick={() => window.location.href = '/api/auth/github'}
+                    className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group"
+                  >
                     <Github className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-bold">GitHub</span>
                   </button>

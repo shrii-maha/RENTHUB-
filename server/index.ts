@@ -15,6 +15,9 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import passport from 'passport';
+import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy } from 'passport-github2';
 import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
@@ -54,6 +57,7 @@ if (!fs.existsSync(uploadsDir)) {
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 app.use('/uploads', express.static(uploadsDir));
 
 // Cloudinary config
@@ -607,32 +611,120 @@ app.get('/api/admin/activity', async (_req, res) => {
 
 // ─── AUTH SETTINGS & EMAIL ──────────────────────────
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // Use SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
+
+// Configure Passport Strategies
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: "/api/auth/google/callback"
+  }, async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value;
+      if (!email) return done(new Error('No email found from Google profile'));
+
+      let user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        user = await User.create({
+          fullName: profile.displayName,
+          email: email.toLowerCase(),
+          password: await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 12),
+          avatar: profile.photos?.[0]?.value || '',
+          role: 'user'
+        });
+      }
+      return done(null, user);
+    } catch (err) {
+      return done(err as Error);
+    }
+  }));
+}
+
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  passport.use(new GitHubStrategy({
+    clientID: process.env.GITHUB_CLIENT_ID,
+    clientSecret: process.env.GITHUB_CLIENT_SECRET,
+    callbackURL: "/api/auth/github/callback"
+  }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+    try {
+      const email = (profile.emails?.[0]?.value || profile.username + '@github.com').toLowerCase();
+      let user = await User.findOne({ email });
+      if (!user) {
+        user = await User.create({
+          fullName: profile.displayName || profile.username,
+          email,
+          password: await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 12),
+          avatar: profile.photos?.[0]?.value || '',
+          role: 'user'
+        });
+      }
+      return done(null, user);
+    } catch (err) {
+      return done(err as Error);
+    }
+  }));
+}
 
 // Verify email configuration on startup
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
-  console.log(`📡 Mail Account: ${process.env.EMAIL_USER}`);
-  console.log(`📡 Password Length: ${process.env.EMAIL_PASS.trim().length} chars`);
-  
-  transporter.verify((error, success) => {
-    if (error) {
-      console.error('❌ Email Configuration Error:', error.message);
-    } else {
-      console.log('📧 Nodemailer is ready to send emails');
-    }
+  transporter.verify((error) => {
+    if (error) console.error('❌ Email Configuration Error:', error.message);
+    else console.log('📧 Nodemailer is ready to send emails');
   });
-} else {
-  console.warn('⚠️ EMAIL_USER or EMAIL_PASS missing. Password reset emails will fail.');
 }
 
 // ─── AUTH ROUTES ──────────────────────────────────────────
 
 const JWT_SECRET = process.env.JWT_SECRET || 'renthub_secret_key_change_in_production';
+
+// GOOGLE AUTH
+app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/api/auth/google/callback', 
+  passport.authenticate('google', { session: false, failureRedirect: '/?error=auth_failed' }),
+  (req: any, res) => {
+    const token = jwt.sign({ id: req.user._id, email: req.user.email, role: req.user.role }, JWT_SECRET, { expiresIn: '30d' });
+    const frontendUrl = process.env.FRONTEND_URL || 'https://renthub-pearl.vercel.app';
+    res.redirect(`${frontendUrl}?token=${token}`);
+  }
+);
+
+// GITHUB AUTH
+app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+app.get('/api/auth/github/callback', 
+  passport.authenticate('github', { session: false, failureRedirect: '/?error=auth_failed' }),
+  (req: any, res) => {
+    const token = jwt.sign({ id: req.user._id, email: req.user.email, role: req.user.role }, JWT_SECRET, { expiresIn: '30d' });
+    const frontendUrl = process.env.FRONTEND_URL || 'https://renthub-pearl.vercel.app';
+    res.redirect(`${frontendUrl}?token=${token}`);
+  }
+);
+
+// EMAIL TEST ROUTE
+app.get('/api/auth/test-email', async (req, res) => {
+  try {
+    if (!process.env.EMAIL_USER) throw new Error('EMAIL_USER is not defined.');
+    await transporter.sendMail({
+      from: `"RentHub Test" <${process.env.EMAIL_USER}>`,
+      to: process.env.EMAIL_USER,
+      subject: 'RentHub Email Test',
+      text: 'If you are reading this, your Nodemailer setup is working correctly!'
+    });
+    res.json({ message: 'Test email sent successfully to ' + process.env.EMAIL_USER });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // REGISTER
 app.post('/api/auth/register', async (req, res) => {
