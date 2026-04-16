@@ -37,7 +37,7 @@ export default function FloatingChat({ isOpen: externalOpen, onOpenToggle }) {
     fetchUnread();
     const interval = setInterval(fetchUnread, 30000); // 30s poll
     return () => clearInterval(interval);
-  }, [isLoaded, chatUserId]);
+  }, [loading, chatUserId]);
 
   if (loading || !user) return null;
 

@@ -10,6 +10,7 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
   const { user } = useAuth();
+  const scrollRef = useRef(null);
   const isAdmin = user?.email === import.meta.env.VITE_ADMIN_EMAIL;
   const chatUserId = isAdmin ? "admin" : user?._id;
 
