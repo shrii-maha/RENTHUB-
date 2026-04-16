@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare, User, Loader2, Lock } from "lucide-react";
+import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare, User as UserIcon, Loader2 as LoaderIcon, Lock as LockIcon } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
@@ -180,7 +180,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                     onClick={() => handleTabChange('messages')} 
                   />
                   <SidebarItem 
-                    icon={<User className="w-5 h-5" />} 
+                    icon={<UserIcon className="w-5 h-5" />} 
                     label="Account Settings" 
                     active={activeTab === 'profile'} 
                     onClick={() => handleTabChange('profile')} 
@@ -759,7 +759,7 @@ function ProfileView() {
               )}
               {avatarLoading && (
                 <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                  <LoaderIcon className="w-8 h-8 text-white animate-spin" />
                 </div>
               )}
             </div>
@@ -809,7 +809,7 @@ function ProfileView() {
               disabled={loading}
               className="w-full md:w-auto px-10 py-4 bg-black text-white rounded-2xl font-bold text-sm tracking-wide shadow-xl shadow-black/10 hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
             >
-              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</> : 'Save Changes'}
+              {loading ? <><LoaderIcon className="w-4 h-4 animate-spin" /> Updating...</> : 'Save Changes'}
             </button>
           </div>
 
@@ -826,7 +826,7 @@ function ProfileView() {
         <div className="flex items-center justify-between p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
            <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
-                <Lock className="w-6 h-6 text-gray-400" />
+                <LockIcon className="w-6 h-6 text-gray-400" />
               </div>
               <div>
                 <p className="text-sm font-bold text-black">Password Management</p>
