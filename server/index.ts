@@ -689,7 +689,13 @@ if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
 const JWT_SECRET = process.env.JWT_SECRET || 'renthub_secret_key_change_in_production';
 
 // GOOGLE AUTH
-app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+app.get('/api/auth/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(400).send('Google Login is not configured. please add GOOGLE_CLIENT_ID/SECRET to Render.');
+  }
+  passport.authenticate('google', { scope: ['profile', 'email'] })(req, res, next);
+});
+
 app.get('/api/auth/google/callback', 
   passport.authenticate('google', { session: false, failureRedirect: '/?error=auth_failed' }),
   (req: any, res) => {
@@ -700,7 +706,13 @@ app.get('/api/auth/google/callback',
 );
 
 // GITHUB AUTH
-app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email'] }));
+app.get('/api/auth/github', (req, res, next) => {
+  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+    return res.status(400).send('GitHub Login is not configured. Please add GITHUB_CLIENT_ID/SECRET to Render.');
+  }
+  passport.authenticate('github', { scope: ['user:email'] })(req, res, next);
+});
+
 app.get('/api/auth/github/callback', 
   passport.authenticate('github', { session: false, failureRedirect: '/?error=auth_failed' }),
   (req: any, res) => {
@@ -773,7 +785,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    if (!user || !user.password) {
       return res.status(401).json({ error: 'Invalid email or password.' });
     }
 
