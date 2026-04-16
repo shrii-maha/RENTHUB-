@@ -766,11 +766,16 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const resetLink = `${frontendUrl}?reset_token=${token}`;
 
     // Send email via Nodemailer
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+      console.error('❌ EMAIL_USER or EMAIL_PASS env vars are not set!');
+      return res.status(500).json({ error: 'Email service not configured. Please contact support.' });
+    }
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS, // Gmail App Password
+        pass: process.env.EMAIL_PASS,
       },
     });
 
