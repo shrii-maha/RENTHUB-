@@ -616,6 +616,9 @@ const transporter = nodemailer.createTransport({
 
 // Verify email configuration on startup
 if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  console.log(`📡 Mail Account: ${process.env.EMAIL_USER}`);
+  console.log(`📡 Password Length: ${process.env.EMAIL_PASS.trim().length} chars`);
+  
   transporter.verify((error, success) => {
     if (error) {
       console.error('❌ Email Configuration Error:', error.message);
