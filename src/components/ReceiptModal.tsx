@@ -2,7 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, ExternalLink } from "lucide-react";
 import { Product } from "../types";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../contexts/AuthContext";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -12,7 +12,7 @@ interface ReceiptModalProps {
 }
 
 export default function ReceiptModal({ isOpen, onClose, product, orderId }: ReceiptModalProps) {
-  const { user } = useUser();
+  const { user } = useAuth();
   if (!product) return null;
 
   const numericPrice = parseInt(product.price.replace(/[^\d]/g, '')) || 0;
@@ -27,7 +27,7 @@ export default function ReceiptModal({ isOpen, onClose, product, orderId }: Rece
   });
 
   const userName = user?.fullName || "Guest User";
-  const userEmail = user?.primaryEmailAddress?.emailAddress || "";
+  const userEmail = user?.email || "";
 
   return (
     <AnimatePresence>

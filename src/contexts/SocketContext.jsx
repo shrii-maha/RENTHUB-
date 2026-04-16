@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
 
@@ -8,7 +8,7 @@ export const useSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
-  const { user } = useUser();
+  const { user } = useAuth();
 
   useEffect(() => {
     // Only connect if user is logged in
@@ -37,7 +37,7 @@ export const SocketProvider = ({ children }) => {
     return () => {
       newSocket.disconnect();
     };
-  }, [user?.id]);
+  }, [user?._id]);
 
   return (
     <SocketContext.Provider value={socket}>

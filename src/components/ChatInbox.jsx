@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, User, Clock, ChevronRight, Inbox, ChevronLeft } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../contexts/AuthContext';
 import ChatWindow from './ChatWindow';
 
 export default function ChatInbox({ variant = 'default' }) {
-  const { user } = useUser();
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('list'); // 'list' or 'window' for floating mode
 
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
-  const chatUserId = isAdmin ? "admin" : user?.id;
+  const isAdmin = user?.email === import.meta.env.VITE_ADMIN_EMAIL;
+  const chatUserId = isAdmin ? "admin" : user?._id;
 
   const isFloating = variant === 'floating';
 

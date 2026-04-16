@@ -2,15 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, User, Clock, Check, CheckCheck } from 'lucide-react';
 import { useSocket } from '../contexts/SocketContext';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function ChatWindow({ sessionId, participantId, listingInfo }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const socket = useSocket();
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
-  const chatUserId = isAdmin ? "admin" : user?.id;
+  const { user } = useAuth();
+  const isAdmin = user?.email === import.meta.env.VITE_ADMIN_EMAIL;
+  const chatUserId = isAdmin ? "admin" : user?._id;
 
   useEffect(() => {
     if (!sessionId) return;

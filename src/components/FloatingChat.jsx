@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, X, Minus } from 'lucide-react';
-import { useUser } from '@clerk/clerk-react';
+import { useAuth } from '../contexts/AuthContext';
 import ChatInbox from './ChatInbox';
 
 export default function FloatingChat({ isOpen: externalOpen, onOpenToggle }) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { user, isLoaded } = useUser();
+  const { user, loading } = useAuth();
 
   const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
   const setIsOpen = onOpenToggle || setInternalOpen;
 
-  const isAdmin = user?.primaryEmailAddress?.emailAddress === import.meta.env.VITE_ADMIN_EMAIL;
-  const chatUserId = isAdmin ? "admin" : user?.id;
+  const isAdmin = user?.email === import.meta.env.VITE_ADMIN_EMAIL;
+  const chatUserId = isAdmin ? "admin" : user?._id;
 
   // Fetch unread count periodically
   useEffect(() => {
-    if (!isLoaded || !chatUserId) return;
+    if (loading || !chatUserId) return;
 
     const fetchUnread = () => {
       fetch(`/api/chat/sessions/user/${chatUserId}`)
@@ -39,7 +39,7 @@ export default function FloatingChat({ isOpen: externalOpen, onOpenToggle }) {
     return () => clearInterval(interval);
   }, [isLoaded, chatUserId]);
 
-  if (!isLoaded || !user) return null;
+  if (loading || !user) return null;
 
   return (
     <div className="fixed bottom-8 right-8 z-[200]">
