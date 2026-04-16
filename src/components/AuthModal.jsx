@@ -1,16 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Mail, Lock, User, Eye, EyeOff, Loader2, ShieldCheck, ArrowLeft, Github, Chrome } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthModal({ isOpen, onClose }) {
-  const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '' });
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'forgot' | 'reset'
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '', resetToken: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { login, register } = useAuth();
+
+  // Auto-detect reset token in URL and open reset mode
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('reset_token');
+    if (token) {
+      setForm(prev => ({ ...prev, resetToken: token }));
+      setMode('reset');
+      // Clean URL without reload
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const handleChange = (e) => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -25,11 +37,42 @@ export default function AuthModal({ isOpen, onClose }) {
 
     if (mode === 'forgot') {
       setLoading(true);
-      // Mock forgot password
-      setTimeout(() => {
-        setSuccess('If an account exists, a reset link has been sent to your email.');
+      try {
+        const res = await fetch('/api/auth/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send email.');
+        setSuccess('Check your inbox! A reset link has been sent to your email.');
+      } catch (err) {
+        setError(err.message);
+      } finally {
         setLoading(false);
-      }, 1500);
+      }
+      return;
+    }
+
+    if (mode === 'reset') {
+      if (form.password !== form.confirm) return setError('Passwords do not match.');
+      if (form.password.length < 6) return setError('Password must be at least 6 characters.');
+      setLoading(true);
+      try {
+        const res = await fetch('/api/auth/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: form.resetToken, password: form.password }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Reset failed.');
+        setSuccess('Password updated! You can now sign in.');
+        setTimeout(() => switchMode('signin'), 2000);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
@@ -46,7 +89,7 @@ export default function AuthModal({ isOpen, onClose }) {
       } else {
         await register(form.fullName, form.email, form.password);
       }
-      setForm({ fullName: '', email: '', password: '', confirm: '' });
+      setForm({ fullName: '', email: '', password: '', confirm: '', resetToken: '' });
       onClose();
     } catch (err) {
       setError(err.message);
@@ -95,7 +138,7 @@ export default function AuthModal({ isOpen, onClose }) {
             </button>
 
             <div className="p-8 pt-10">
-              {mode === 'forgot' ? (
+              {(mode === 'forgot' || mode === 'reset') ? (
                 <button 
                   onClick={() => switchMode('signin')}
                   className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-black transition-colors mb-8"
@@ -112,17 +155,18 @@ export default function AuthModal({ isOpen, onClose }) {
               {/* Title */}
               <div className="mb-6">
                 <h2 className="text-2xl font-display font-bold tracking-tighter leading-tight mb-1.5">
-                  {mode === 'signin' ? 'Welcome Back.' : mode === 'signup' ? 'Join the Hub.' : 'Reset Password.'}
+                  {mode === 'signin' ? 'Welcome Back.' : mode === 'signup' ? 'Join the Hub.' : mode === 'reset' ? 'Set New Password.' : 'Reset Password.'}
                 </h2>
                 <p className="text-gray-400 text-xs font-medium">
                   {mode === 'signin' ? 'Enter your credentials to access your account.' : 
-                   mode === 'signup' ? 'Create an account to start buying and selling.' : 
+                   mode === 'signup' ? 'Create an account to start buying and selling.' :
+                   mode === 'reset' ? 'Choose a new secure password for your account.' :
                    'Enter your email to receive a recovery link.'}
                 </p>
               </div>
 
-              {/* Social Logins (Premium Placeholders) */}
-              {mode !== 'forgot' && (
+              {/* Social Logins - only for signin/signup */}
+              {(mode === 'signin' || mode === 'signup') && (
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   <button className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group">
                     <Chrome className="w-4 h-4 group-hover:scale-110 transition-transform" />
@@ -135,7 +179,7 @@ export default function AuthModal({ isOpen, onClose }) {
                 </div>
               )}
 
-              {mode !== 'forgot' && (
+              {(mode === 'signin' || mode === 'signup') && (
                 <div className="relative flex items-center gap-3 mb-5">
                   <div className="flex-1 h-px bg-gray-100" />
                   <span className="text-[9px] uppercase font-bold tracking-widest text-gray-300">or use email</span>
@@ -165,6 +209,8 @@ export default function AuthModal({ isOpen, onClose }) {
                     </motion.div>
                   )}
 
+                  {/* Email field — hidden for reset mode */}
+                  {mode !== 'reset' && (
                   <InputField
                     key="email-field"
                     icon={<Mail className="w-4 h-4" />}
@@ -175,6 +221,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     onChange={handleChange}
                     required
                   />
+                  )}
 
                   {mode !== 'forgot' && (
                     <motion.div key="password-container" className="relative" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -197,7 +244,7 @@ export default function AuthModal({ isOpen, onClose }) {
                     </motion.div>
                   )}
 
-                  {mode === 'signup' && (
+                  {(mode === 'signup' || mode === 'reset') && (
                     <motion.div
                       key="confirm-field"
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -263,9 +310,12 @@ export default function AuthModal({ isOpen, onClose }) {
                   whileTap={{ scale: loading ? 1 : 0.99 }}
                   className="w-full py-3.5 bg-black text-white rounded-xl font-bold text-sm tracking-wide hover:bg-gray-900 transition-all shadow-xl shadow-black/20 disabled:opacity-60 flex items-center justify-center gap-3 mt-1"
                 >
-                  {loading
+                   {loading
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing Request...</>
-                    : mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'
+                    : mode === 'signin' ? 'Sign In' 
+                    : mode === 'signup' ? 'Create Account' 
+                    : mode === 'reset' ? 'Set New Password'
+                    : 'Send Reset Link'
                   }
                 </motion.button>
               </form>

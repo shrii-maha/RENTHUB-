@@ -13,6 +13,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import nodemailer from 'nodemailer';
+import crypto from 'crypto';
 import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
@@ -739,6 +741,93 @@ app.post('/api/auth/avatar', verifyToken, upload.single('avatar'), async (req: A
     console.log(`📸 Avatar updated for: ${updatedUser.email}`);
     res.json(updatedUser);
   } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// FORGOT PASSWORD
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required.' });
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    // Always respond OK to prevent email enumeration
+    if (!user) return res.json({ message: 'If an account exists, a reset link has been sent.' });
+
+    // Generate secure token
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = token;
+    user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    await user.save();
+
+    // Build reset link
+    const frontendUrl = process.env.FRONTEND_URL || 'https://renthub-pearl.vercel.app';
+    const resetLink = `${frontendUrl}?reset_token=${token}`;
+
+    // Send email via Nodemailer
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS, // Gmail App Password
+      },
+    });
+
+    await transporter.sendMail({
+      from: `"RentHub" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: 'Reset Your RentHub Password',
+      html: `
+        <div style="font-family: 'Helvetica Neue', sans-serif; max-width: 520px; margin: 0 auto; background: #f9f9f9; border-radius: 16px; overflow: hidden;">
+          <div style="background: #000; padding: 32px; text-align: center;">
+            <h1 style="color: #fff; margin: 0; font-size: 24px; letter-spacing: -1px;">R RentHub</h1>
+          </div>
+          <div style="padding: 40px;">
+            <h2 style="font-size: 22px; color: #000; margin-top: 0;">Reset Your Password</h2>
+            <p style="color: #666; line-height: 1.6;">Hi <strong>${user.fullName}</strong>,<br/>We received a request to reset your password. Click the button below to set a new one.</p>
+            <div style="text-align: center; margin: 32px 0;">
+              <a href="${resetLink}" style="background: #000; color: #fff; padding: 16px 32px; border-radius: 50px; text-decoration: none; font-weight: bold; font-size: 15px;">Reset Password</a>
+            </div>
+            <p style="color: #999; font-size: 13px;">This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;"/>
+            <p style="color: #ccc; font-size: 11px; text-align: center;">RentHub — The Premium Marketplace</p>
+          </div>
+        </div>
+      `,
+    });
+
+    console.log(`📧 Password reset email sent to: ${user.email}`);
+    res.json({ message: 'If an account exists, a reset link has been sent.' });
+  } catch (err: any) {
+    console.error('❌ Forgot password error:', err.message);
+    res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
+  }
+});
+
+// RESET PASSWORD
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: 'Token and password are required.' });
+    if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: new Date() }, // not expired
+    });
+
+    if (!user) return res.status(400).json({ error: 'Reset link is invalid or has expired.' });
+
+    user.password = await bcrypt.hash(password, 12);
+    user.resetPasswordToken = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    console.log(`✅ Password reset for: ${user.email}`);
+    res.json({ message: 'Password updated successfully. You can now log in.' });
+  } catch (err: any) {
+    console.error('❌ Reset password error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
