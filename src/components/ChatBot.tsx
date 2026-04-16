@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, X, Bot, Sparkles, User, Loader2 } from 'lucide-react';
+import { MessageSquare, Send, X, Bot, Sparkles, User as UserIcon, Loader2 as LoaderIcon } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Message {
@@ -206,7 +206,7 @@ If you don't know a specific listing detail, encourage the user to browse the Ma
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     flexShrink: 0
                   }}>
-                    {msg.role === 'user' ? <User size={16} color="#fff" /> : <Sparkles size={16} color="#1a1a1a" />}
+                    {msg.role === 'user' ? <UserIcon size={16} color="#fff" /> : <Sparkles size={16} color="#1a1a1a" />}
                   </div>
                   <div style={{
                     padding: '12px 18px', borderRadius: 20,
@@ -228,7 +228,7 @@ If you don't know a specific listing detail, encourage the user to browse the Ma
                     width: 32, height: 32, borderRadius: 10, background: '#f0f0f0',
                     display: 'flex', alignItems: 'center', justifyContent: 'center'
                   }}>
-                    <Loader2 size={16} className="animate-spin" />
+                    <LoaderIcon size={16} className="animate-spin" />
                   </div>
                   <div style={{
                     padding: '12px 18px', background: '#fff', borderRadius: 20,
