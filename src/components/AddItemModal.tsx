@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { X, Upload, Check } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../contexts/AuthContext";
 
 interface AddItemModalProps {
   isOpen: boolean;
@@ -10,9 +10,9 @@ interface AddItemModalProps {
 }
 
 export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
-  const { user, isLoaded } = useUser();
+  const { user, isSignedIn } = useAuth();
 
-  if (!isLoaded || !user) return null;
+  if (!isSignedIn || !user) return null;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -130,7 +130,7 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     const newItem = {
       ...formData,
       rating: 5.0,
-      sellerId: user.id, // Strictly using user.id, no 'anonymous' fallback
+      sellerId: user._id, // MongoDB user ID
       createdAt: new Date().toISOString(),
     };
 

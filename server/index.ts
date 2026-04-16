@@ -11,6 +11,8 @@ import dotenv from 'dotenv';
 import Stripe from 'stripe';
 import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import Listing from './models/Listing.js';
 import ActivityLog from './models/ActivityLog.js';
 import Order from './models/Order.js';
@@ -19,6 +21,7 @@ import Review from './models/Review.js';
 import { GoogleGenAI } from "@google/genai";
 import ChatSession from './models/ChatSession.js';
 import ChatMessage from './models/ChatMessage.js';
+import { verifyToken, AuthRequest } from './middleware/auth.js';
 
 dotenv.config();
 
@@ -213,7 +216,7 @@ app.get('/api/listings/:id', async (req, res) => {
 });
 
 // POST create listing
-app.post('/api/listings', async (req, res) => {
+app.post('/api/listings', verifyToken, async (req: AuthRequest, res) => {
   try {
     console.log('📦 Listing Attempt:', req.body.title);
     
@@ -254,7 +257,7 @@ app.post('/api/listings', async (req, res) => {
 });
 
 // DELETE listing
-app.delete('/api/listings/:id', async (req, res) => {
+app.delete('/api/listings/:id', verifyToken, async (req: AuthRequest, res) => {
   try {
     const listing = await Listing.findByIdAndDelete(req.params.id);
     if (!listing) return res.status(404).json({ error: 'Listing not found' });
@@ -286,7 +289,7 @@ app.get('/api/listings/seller/:id', async (req, res) => {
 // ─── ORDER ROUTES ──────────────────────────────────────────
 
 // CREATE order
-app.post('/api/orders', async (req, res) => {
+app.post('/api/orders', verifyToken, async (req: AuthRequest, res) => {
   try {
     const order = new Order(req.body);
     await order.save();
@@ -600,23 +603,141 @@ app.get('/api/admin/activity', async (_req, res) => {
   }
 });
 
-// POST sync user data
-app.post('/api/users/sync', async (req, res) => {
-  try {
-    const { clerkId, email, fullName } = req.body;
-    if (!clerkId || !email) return res.status(400).json({ error: "Missing required fields" });
+// ─── AUTH ROUTES ──────────────────────────────────────────
 
-    let user = await User.findOne({ clerkId });
-    if (user) {
-      user.email = email;
-      user.fullName = fullName || user.fullName;
-      user.lastActiveAt = new Date();
-      await user.save();
-    } else {
-      user = new User({ clerkId, email, fullName: fullName || email.split('@')[0], lastActiveAt: new Date() });
-      await user.save();
+const JWT_SECRET = process.env.JWT_SECRET || 'renthub_secret_key_change_in_production';
+
+// REGISTER
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { fullName, email, password } = req.body;
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ error: 'All fields are required.' });
     }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    }
+
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const adminEmail = process.env.VITE_ADMIN_EMAIL || 'admin@renthub.com';
+    const role = email.toLowerCase() === adminEmail.toLowerCase() ? 'admin' : 'user';
+
+    const user = new User({
+      fullName,
+      email: email.toLowerCase(),
+      password: hashedPassword,
+      role,
+      lastActiveAt: new Date()
+    });
+    await user.save();
+
+    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    const { password: _, ...userWithoutPassword } = (user as any).toObject();
+    console.log(`✅ New user registered: ${user.email} (${user.role})`);
+    res.status(201).json({ token, user: userWithoutPassword });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// LOGIN
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required.' });
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password.' });
+    }
+
+    user.lastActiveAt = new Date();
+    await user.save();
+
+    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    const { password: _, ...userWithoutPassword } = (user as any).toObject();
+    console.log(`✅ User logged in: ${user.email}`);
+    res.json({ token, user: userWithoutPassword });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET CURRENT USER (me)
+app.get('/api/auth/me', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const token = authHeader.split(' ')[1];
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    user.lastActiveAt = new Date();
+    await user.save();
     res.json(user);
+  } catch (err: any) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+});
+
+// UPDATE PROFILE
+app.put('/api/auth/profile', verifyToken, async (req: AuthRequest, res) => {
+  try {
+    const { fullName, email } = req.body;
+    const userId = req.user?.id;
+
+    if (!fullName || !email) {
+      return res.status(400).json({ error: 'Full name and email are required.' });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { fullName, email: email.toLowerCase(), lastActiveAt: new Date() },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) return res.status(404).json({ error: 'User not found' });
+
+    console.log(`👤 Profile updated for: ${updatedUser.email}`);
+    res.json(updatedUser);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// UPDATE AVATAR
+app.post('/api/auth/avatar', verifyToken, upload.single('avatar'), async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!req.file) {
+      return res.status(400).json({ error: 'No avatar image provided.' });
+    }
+
+    const avatarUrl = req.file.path;
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { avatar: avatarUrl, lastActiveAt: new Date() },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) return res.status(404).json({ error: 'User not found' });
+
+    console.log(`📸 Avatar updated for: ${updatedUser.email}`);
+    res.json(updatedUser);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
@@ -734,15 +855,16 @@ app.get('/api/admin/users', async (_req, res) => {
     const realUsers = await User.find().lean();
     
     // 3. Merge all data sources
-    const mergedUsers = realUsers.map(u => {
-      const lStats = listingStats.find(s => s._id === u.clerkId || s._id === u.email);
-      const rStats = reviewStats.find(r => r._id === u.clerkId || r._id === u.email);
+    const mergedUsers = realUsers.map((u: any) => {
+      const lStats = listingStats.find((s: any) => s._id === String(u._id) || s._id === u.email);
+      const rStats = reviewStats.find((r: any) => r._id === String(u._id) || r._id === u.email);
       
       return {
         _id: u._id,
         email: u.email,
         fullName: u.fullName,
-        clerkId: u.clerkId,
+        role: u.role,
+        avatar: u.avatar,
         lastActive: u.lastActiveAt,
         totalListings: lStats ? lStats.totalListings : 0,
         avgRating: rStats ? Math.round(rStats.avgRating * 10) / 10 : null,
@@ -750,16 +872,17 @@ app.get('/api/admin/users', async (_req, res) => {
       };
     });
 
-    // Add sellers that might not be in the 'User' model yet (legacy or admin items)
-    listingStats.forEach(stats => {
-      const exists = mergedUsers.find(u => u.clerkId === stats._id || u.email === stats._id);
+    // Add sellers that might not be in the 'User' model yet (legacy items)
+    listingStats.forEach((stats: any) => {
+      const exists = mergedUsers.find((u: any) => u.email === stats._id);
       if (!exists) {
-        const rStats = reviewStats.find(r => r._id === stats._id);
+        const rStats = reviewStats.find((r: any) => r._id === stats._id);
         mergedUsers.push({
           _id: stats._id,
           email: stats._id,
           fullName: stats._id.includes('@') ? stats._id.split('@')[0] : stats._id,
-          clerkId: stats._id,
+          role: 'user',
+          avatar: '',
           lastActive: null,
           totalListings: stats.totalListings,
           avgRating: rStats ? Math.round(rStats.avgRating * 10) / 10 : null,
@@ -768,7 +891,7 @@ app.get('/api/admin/users', async (_req, res) => {
       }
     });
 
-    mergedUsers.sort((a, b) => {
+    mergedUsers.sort((a: any, b: any) => {
        if (a.lastActive && b.lastActive) return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
        if (a.lastActive) return -1;
        if (b.lastActive) return 1;
@@ -797,17 +920,17 @@ app.post('/api/chat/sessions', async (req, res) => {
   }
 });
 
-app.get('/api/chat/sessions/user/:clerkId', async (req, res) => {
+app.get('/api/chat/sessions/user/:userId', async (req, res) => {
   try {
-    const { clerkId } = req.params;
-    const sessions = await ChatSession.find({ participants: clerkId })
+    const { userId } = req.params;
+    const sessions = await ChatSession.find({ participants: userId })
       .sort({ lastMessageAt: -1 }).populate('listingId').lean();
     
     // Add unread count to each session
     const sessionsWithUnread = await Promise.all(sessions.map(async (session: any) => {
       const unreadCount = await ChatMessage.countDocuments({
         sessionId: session._id,
-        senderId: { $ne: clerkId },
+        senderId: { $ne: userId },
         isRead: false
       });
       return { ...session, unreadCount };

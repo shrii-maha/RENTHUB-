@@ -3,7 +3,7 @@ import { X, ShieldCheck, CreditCard, Landmark, QrCode, AlertCircle, CheckCircle,
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
 import { loadStripe } from "@stripe/stripe-js";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../contexts/AuthContext";
 import { QRCodeSVG } from 'qrcode.react';
 import {
   CardElement,
@@ -232,10 +232,10 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
   const [reviews, setReviews] = useState<any[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(false);
 
-  const { user, isLoaded } = useUser();
+  const { user, isSignedIn } = useAuth();
 
   useEffect(() => {
-    if (isOpen && product && user) {
+    if (isOpen && product && isSignedIn) {
       setLoadingReviews(true);
       fetch(`/api/reviews/listing/${product.id}`)
         .then(res => res.json())
@@ -247,7 +247,7 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
     }
   }, [isOpen, product, user]);
 
-  if (!isLoaded || !user || !product) return null;
+  if (!isSignedIn || !user || !product) return null;
 
   const numericPrice = parseInt(product.price.replace(/[^\d]/g, '')) || 0;
   const serviceFee = Math.floor(numericPrice * 0.05);
@@ -261,7 +261,7 @@ export default function CheckoutModal({ isOpen, onClose, product, onOrderSuccess
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           listingId: product.id,
-          buyerId: user?.primaryEmailAddress?.emailAddress || "guest",
+          buyerId: user?.email || "guest",
           sellerId: product.sellerId,
           amount: total,
           paymentMethod: paymentMethod,

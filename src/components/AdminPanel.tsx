@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle, Star, MessageSquare } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { useUser } from "@clerk/clerk-react";
+import { useAuth } from "../contexts/AuthContext";
 import EditListingModal from "./EditListingModal";
 import ChatInbox from "./ChatInbox";
 
@@ -13,7 +13,9 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
-  const { user } = useUser();
+  const { user, isAdmin } = useAuth();
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+  const userEmail = user?.email;
   const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts' | 'listings' | 'messages'>('overview');
   const [stats, setStats] = useState({ totalEarnings: 0, activeListings: 0, activeRents: 0, totalEscrowVolume: 0 });
   const [pending, setPending] = useState<any[]>([]);
@@ -24,10 +26,6 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [editingListing, setEditingListing] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isAdmin = userEmail === adminEmail;
 
   useEffect(() => {
     if (isAdmin && isOpen) {

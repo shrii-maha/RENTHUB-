@@ -1,0 +1,315 @@
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, Mail, Lock, User, Eye, EyeOff, Loader2, ShieldCheck, ArrowLeft, Github, Chrome } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+export default function AuthModal({ isOpen, onClose }) {
+  const [mode, setMode] = useState('signin'); // 'signin' | 'signup' | 'forgot'
+  const [form, setForm] = useState({ fullName: '', email: '', password: '', confirm: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const { login, register } = useAuth();
+
+  const handleChange = (e) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    setError('');
+    setSuccess('');
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (mode === 'forgot') {
+      setLoading(true);
+      // Mock forgot password
+      setTimeout(() => {
+        setSuccess('If an account exists, a reset link has been sent to your email.');
+        setLoading(false);
+      }, 1500);
+      return;
+    }
+
+    if (mode === 'signup') {
+      if (!form.fullName.trim()) return setError('Full name is required.');
+      if (form.password !== form.confirm) return setError('Passwords do not match.');
+      if (form.password.length < 6) return setError('Password must be at least 6 characters.');
+    }
+
+    setLoading(true);
+    try {
+      if (mode === 'signin') {
+        await login(form.email, form.password);
+      } else {
+        await register(form.fullName, form.email, form.password);
+      }
+      setForm({ fullName: '', email: '', password: '', confirm: '' });
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const switchMode = (m) => {
+    setMode(m);
+    setError('');
+    setSuccess('');
+    setForm({ fullName: '', email: '', password: '', confirm: '' });
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
+          />
+
+          {/* Modal */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 32 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 32 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+            className="relative w-full max-w-lg bg-white/90 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20"
+          >
+            {/* Top gradient accent */}
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-accent via-yellow-400 to-brand-accent animate-gradient-x" />
+
+            {/* Close */}
+            <button
+              onClick={onClose}
+              className="absolute top-8 right-8 p-2.5 rounded-full hover:bg-black/5 text-black/20 hover:text-black transition-all z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="p-12 pt-16">
+              {mode === 'forgot' ? (
+                <button 
+                  onClick={() => switchMode('signin')}
+                  className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-black transition-colors mb-8"
+                >
+                  <ArrowLeft className="w-3 h-3" /> Back to Sign In
+                </button>
+              ) : (
+                <div className="flex items-center gap-3 mb-10">
+                   <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-black/20">R</div>
+                   <span className="text-3xl font-display font-bold tracking-tighter">RentHub</span>
+                </div>
+              )}
+
+              {/* Title */}
+              <div className="mb-10">
+                <h2 className="text-4xl font-display font-bold tracking-tighter leading-[0.9] mb-3">
+                  {mode === 'signin' ? 'Welcome Back.' : mode === 'signup' ? 'Join the Hub.' : 'Reset Password.'}
+                </h2>
+                <p className="text-gray-400 text-sm font-medium">
+                  {mode === 'signin' ? 'Enter your credentials to access your account.' : 
+                   mode === 'signup' ? 'Create an account to start buying and selling.' : 
+                   'Enter your email to receive a recovery link.'}
+                </p>
+              </div>
+
+              {/* Social Logins (Premium Placeholders) */}
+              {mode !== 'forgot' && (
+                <div className="grid grid-cols-2 gap-4 mb-8">
+                  <button className="flex items-center justify-center gap-3 py-3.5 bg-gray-50 hover:bg-gray-100 rounded-2xl border border-gray-100 transition-all group">
+                    <Chrome className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold">Google</span>
+                  </button>
+                  <button className="flex items-center justify-center gap-3 py-3.5 bg-gray-50 hover:bg-gray-100 rounded-2xl border border-gray-100 transition-all group">
+                    <Github className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                    <span className="text-xs font-bold">GitHub</span>
+                  </button>
+                </div>
+              )}
+
+              {mode !== 'forgot' && (
+                <div className="relative flex items-center gap-4 mb-8">
+                  <div className="flex-1 h-px bg-gray-100" />
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-gray-300">or use email</span>
+                  <div className="flex-1 h-px bg-gray-100" />
+                </div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                <AnimatePresence mode="popLayout">
+                  {mode === 'signup' && (
+                    <motion.div
+                      key="signup-field"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                    >
+                      <InputField
+                        icon={<User className="w-4 h-4" />}
+                        name="fullName"
+                        type="text"
+                        placeholder="Full Name"
+                        value={form.fullName}
+                        onChange={handleChange}
+                        required
+                      />
+                    </motion.div>
+                  )}
+
+                  <InputField
+                    key="email-field"
+                    icon={<Mail className="w-4 h-4" />}
+                    name="email"
+                    type="email"
+                    placeholder="Email address"
+                    value={form.email}
+                    onChange={handleChange}
+                    required
+                  />
+
+                  {mode !== 'forgot' && (
+                    <motion.div key="password-container" className="relative" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                      <InputField
+                        icon={<Lock className="w-4 h-4" />}
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        placeholder="Password"
+                        value={form.password}
+                        onChange={handleChange}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(p => !p)}
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-300 hover:text-black transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </motion.div>
+                  )}
+
+                  {mode === 'signup' && (
+                    <motion.div
+                      key="confirm-field"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                    >
+                      <InputField
+                        icon={<Lock className="w-4 h-4" />}
+                        name="confirm"
+                        type="password"
+                        placeholder="Confirm Password"
+                        value={form.confirm}
+                        onChange={handleChange}
+                        required
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {mode === 'signin' && (
+                  <div className="flex justify-end">
+                    <button 
+                      type="button"
+                      onClick={() => switchMode('forgot')}
+                      className="text-xs font-bold text-gray-400 hover:text-brand-accent transition-colors"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+
+                {/* Error / Success Feedback */}
+                <AnimatePresence mode="wait">
+                  {error && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-red-500 text-xs font-bold bg-red-50 px-5 py-4 rounded-2xl border border-red-100 flex items-center gap-2"
+                    >
+                      <div className="w-1.5 h-1.5 bg-red-500 rounded-full" />
+                      {error}
+                    </motion.div>
+                  )}
+                  {success && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                      className="text-emerald-600 text-xs font-bold bg-emerald-50 px-5 py-4 rounded-2xl border border-emerald-100 flex items-center gap-2"
+                    >
+                      <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      {success}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit */}
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  whileHover={{ scale: loading ? 1 : 1.01 }}
+                  whileTap={{ scale: loading ? 1 : 0.99 }}
+                  className="w-full py-4.5 bg-black text-white rounded-[1.4rem] font-bold text-sm tracking-wide hover:bg-gray-900 transition-all shadow-2xl shadow-black/20 disabled:opacity-60 flex items-center justify-center gap-3 mt-2"
+                >
+                  {loading
+                    ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing Request...</>
+                    : mode === 'signin' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'
+                  }
+                </motion.button>
+              </form>
+
+              {/* Footer Toggle */}
+              <div className="mt-10 text-center">
+                <p className="text-sm text-gray-400 font-medium">
+                  {mode === 'signin' ? "Don't have an account?" : mode === 'signup' ? "Already have an account?" : "Remember your password?"}
+                  {' '}
+                  <button 
+                    onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                    className="text-black font-bold hover:underline"
+                  >
+                    {mode === 'signin' ? 'Sign up for free' : 'Sign in'}
+                  </button>
+                </p>
+              </div>
+
+              {/* Security Badge */}
+              <div className="mt-12 pt-8 border-t border-gray-100 flex items-center justify-center gap-3 text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>End-to-End Encrypted Authentication</span>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function InputField({ icon, name, type, placeholder, value, onChange, required }) {
+  return (
+    <div className="group relative flex items-center gap-4 bg-gray-50/50 border border-gray-100 rounded-[1.4rem] px-6 py-4.5 focus-within:border-black/20 focus-within:bg-white focus-within:shadow-lg focus-within:shadow-black/5 transition-all">
+      <span className="text-gray-300 group-focus-within:text-black transition-colors">{icon}</span>
+      <input
+        name={name}
+        type={type}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+        required={required}
+        className="flex-1 bg-transparent text-[15px] font-bold text-black placeholder-gray-300 outline-none"
+      />
+    </div>
+  );
+}

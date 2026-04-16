@@ -18,8 +18,9 @@ import PrivacyPolicy from "./components/PrivacyPolicy";
 import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
 import FloatingChat from "./components/FloatingChat";
+import AuthModal from "./components/AuthModal";
 import { motion, useScroll, useSpring } from "motion/react";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useAuth } from "./contexts/AuthContext";
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('home');
@@ -47,37 +48,13 @@ export default function App() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dashboardTab, setDashboardTab] = useState('dashboard');
   const [listings, setListings] = useState([]);
   const [searchFilters, setSearchFilters] = useState();
 
-  const { user } = useUser();
-
-  useEffect(() => {
-    if (user) {
-      const syncUser = async () => {
-        try {
-          await fetch('/api/users/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              clerkId: user.id,
-              email: user.primaryEmailAddress?.emailAddress,
-              fullName: user.fullName || user.firstName || ''
-            })
-          });
-        } catch (err) {
-          console.error('Failed to sync user', err);
-        }
-      };
-      syncUser();
-      
-      // Ping every 5 minutes to keep "online" status fresh
-      const interval = setInterval(syncUser, 5 * 60 * 1000);
-      return () => clearInterval(interval);
-    }
-  }, [user]);
+  const { user, isSignedIn } = useAuth();
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -158,12 +135,9 @@ export default function App() {
     setListings(listings.filter(item => item.id !== id));
   };
 
-  const { isSignedIn } = useUser();
-  const { openSignIn } = useClerk();
-
   const handleProductSelect = (product) => {
     if (!isSignedIn) {
-      openSignIn();
+      setIsAuthModalOpen(true);
       return;
     }
     setSelectedProduct(product);
@@ -172,7 +146,7 @@ export default function App() {
 
   const handleOpenChat = async (sellerId, listingId) => {
     if (!isSignedIn) {
-      openSignIn();
+      setIsAuthModalOpen(true);
       return;
     }
     
@@ -185,7 +159,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          participants: [user.id, sellerId],
+          participants: [user._id, sellerId],
           listingId
         })
       });
@@ -223,7 +197,7 @@ export default function App() {
       <Navbar 
         onOpenSell={() => {
           if (!isSignedIn) {
-            openSignIn();
+            setIsAuthModalOpen(true);
             return;
           }
           setIsSellModalOpen(true);
@@ -233,6 +207,7 @@ export default function App() {
         activeSection={activeSection}
         onOpenDashboard={() => setIsDashboardOpen(true)}
         onCategorySelect={handleCategorySelect}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
       
       <main>
@@ -243,7 +218,7 @@ export default function App() {
             <FeaturedListings onProductSelect={handleProductSelect} listings={listings} onOpenChat={handleOpenChat} />
             <HowItWorks onOpenSell={() => {
               if (!isSignedIn) {
-                openSignIn();
+                setIsAuthModalOpen(true);
                 return;
               }
               setIsSellModalOpen(true);
@@ -273,7 +248,7 @@ export default function App() {
                     <button 
                       onClick={() => {
                         if (!isSignedIn) {
-                          openSignIn();
+                          setIsAuthModalOpen(true);
                           return;
                         }
                         setIsSellModalOpen(true);
@@ -347,7 +322,7 @@ export default function App() {
         listings={listings}
         onOpenSell={() => {
           if (!isSignedIn) {
-            openSignIn();
+            setIsAuthModalOpen(true);
             return;
           }
           setIsDashboardOpen(false);
@@ -355,6 +330,8 @@ export default function App() {
         }}
         initialTab={dashboardTab}
       />
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
       <FloatingChat 
         isOpen={isFloatingChatOpen} 

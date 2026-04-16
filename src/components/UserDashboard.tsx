@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare } from "lucide-react";
-import { useUser, useClerk } from "@clerk/clerk-react";
+import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
 import ReceiptModal from "./ReceiptModal";
@@ -15,12 +15,16 @@ interface UserDashboardProps {
   initialTab?: Tab;
 }
 
-type Tab = 'dashboard' | 'listings' | 'purchases' | 'earnings' | 'messages';
+type Tab = 'dashboard' | 'listings' | 'purchases' | 'earnings' | 'messages' | 'profile';
 
 export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, initialTab }: UserDashboardProps) {
-  const { user } = useUser();
-  const { signOut } = useClerk();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
+
+  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
+  const userEmail = user?.email;
+  const isAdmin = userEmail === import.meta.env.VITE_ADMIN_EMAIL || user?.role === 'admin';
+
   const [orders, setOrders] = useState<any[]>([]);
   const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
   const [userListings, setUserListings] = useState<Product[]>([]);
@@ -29,29 +33,25 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedOrderForReview, setSelectedOrderForReview] = useState<any>(null);
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
-  const userEmail = user?.primaryEmailAddress?.emailAddress;
-  const isAdmin = userEmail === import.meta.env.VITE_ADMIN_EMAIL;
-
   useEffect(() => {
     if (isOpen && userEmail && !isAdmin) {
-      // Fetch Seller Payouts/Orders using Clerk User ID
-      if (user?.id) {
-        fetch(`/api/orders/seller/${user.id}`)
+      // Fetch Seller Orders using our MongoDB user ID
+      if (user?._id) {
+        fetch(`/api/orders/seller/${user._id}`)
           .then(res => res.json())
           .then(data => setOrders(Array.isArray(data) ? data : []))
           .catch(console.error);
       }
 
-      // Fetch Buyer Orders
+      // Fetch Buyer Orders by email
       fetch(`/api/orders/buyer/${userEmail}`)
         .then(res => res.json())
         .then(data => setBuyerOrders(Array.isArray(data) ? data : []))
         .catch(console.error);
 
       // Fetch Seller's own listings (including sold/rented)
-      if (user?.id) {
-        fetch(`/api/listings/seller/${user.id}`)
+      if (user?._id) {
+        fetch(`/api/listings/seller/${user._id}`)
           .then(res => res.json())
           .then(data => {
             if (Array.isArray(data)) {
@@ -64,13 +64,14 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
           .catch(console.error);
       }
     }
-  }, [isOpen, userEmail, isAdmin, user?.id]);
+  }, [isOpen, userEmail, isAdmin, user?._id]);
 
   useEffect(() => {
     if (initialTab) {
       setActiveTab(initialTab);
     }
   }, [initialTab]);
+
 
   if (!user || isAdmin) return null;
 
@@ -178,12 +179,18 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                     active={activeTab === 'messages'} 
                     onClick={() => handleTabChange('messages')} 
                   />
+                  <SidebarItem 
+                    icon={<User className="w-5 h-5" />} 
+                    label="Account Settings" 
+                    active={activeTab === 'profile'} 
+                    onClick={() => handleTabChange('profile')} 
+                  />
                 </nav>
               </div>
 
               <div className="pt-8 border-t border-white/10 mt-8">
                 <button 
-                  onClick={() => signOut({ redirectUrl: '/' })}
+                  onClick={() => logout()}
                   className="flex items-center gap-4 p-4 w-full text-white/40 hover:text-red-400 hover:bg-red-400/10 rounded-2xl font-bold cursor-pointer transition-all"
                 >
                   <LogOut className="w-5 h-5" />
@@ -198,10 +205,10 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
               <div className="p-8 md:p-12 pb-0 flex flex-col md:flex-row justify-between items-start gap-6">
                 <div>
                   <h1 className="text-[34px] font-display font-bold leading-none mb-1 italic tracking-tight text-black">
-                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'purchases' ? 'My Purchases.' : activeTab === 'messages' ? 'Direct Messages.' : 'Manage Listings.'}
+                    {activeTab === 'dashboard' ? 'Welcome back,' : activeTab === 'earnings' ? 'My Earnings.' : activeTab === 'purchases' ? 'My Purchases.' : activeTab === 'messages' ? 'Direct Messages.' : activeTab === 'profile' ? 'Account Settings.' : 'Manage Listings.'}
                   </h1>
                   <p className="text-brand-primary/40 text-xs font-medium tracking-wide">
-                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Items you bought or rented.' : activeTab === 'messages' ? 'Chat with buyers and sellers in real-time.' : 'Track and manage your marketplace assets.'}
+                    {activeTab === 'dashboard' ? 'Track your performance and manage item listings.' : activeTab === 'earnings' ? 'Manage your payouts and transparent history.' : activeTab === 'purchases' ? 'Items you bought or rented.' : activeTab === 'messages' ? 'Chat with buyers and sellers in real-time.' : activeTab === 'profile' ? 'Manage your identity and security preferences.' : 'Track and manage your marketplace assets.'}
                   </p>
                 </div>
                 <div className="flex gap-4">
@@ -261,6 +268,12 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                   {activeTab === 'messages' && (
                     <motion.div key="messages" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="h-full">
                       <ChatInbox />
+                    </motion.div>
+                  )}
+
+                  {activeTab === 'profile' && (
+                    <motion.div key="profile" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+                      <ProfileView />
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -689,5 +702,142 @@ function ConfirmDeliveryButton({ orderId, onConfirmed }: { orderId: string; onCo
       <PackageCheck className="w-4 h-4" />
       {loading ? 'Confirming...' : 'I Received It - Release Payment'}
     </button>
+  );
+}
+// ─── PROFILE VIEW ──────────────────────────────────────────
+function ProfileView() {
+  const { user, updateProfile, updateAvatar } = useAuth();
+  const [form, setForm] = useState({ fullName: user?.fullName || '', email: user?.email || '' });
+  const [loading, setLoading] = useState(false);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [msg, setMsg] = useState({ type: '', text: '' });
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setMsg({ type: '', text: '' });
+    try {
+      await updateProfile(form);
+      setMsg({ type: 'success', text: 'Profile updated successfully!' });
+    } catch (err: any) {
+      setMsg({ type: 'error', text: err.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarLoading(true);
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      await updateAvatar(formData);
+      setMsg({ type: 'success', text: 'Avatar updated!' });
+    } catch (err: any) {
+      setMsg({ type: 'error', text: err.message });
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const initials = user?.fullName?.split(' ').map((n: any) => n[0]).join('').toUpperCase().slice(0, 2);
+
+  return (
+    <div className="max-w-2xl">
+      <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm mb-8">
+        <div className="flex flex-col md:flex-row items-center gap-8 mb-10">
+          <div className="relative group">
+            <div className="w-32 h-32 rounded-[2rem] bg-brand-primary text-white text-4xl font-display font-bold flex items-center justify-center overflow-hidden border-4 border-white shadow-2xl relative">
+              {user?.avatar ? (
+                <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+              {avatarLoading && (
+                <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-white animate-spin" />
+                </div>
+              )}
+            </div>
+            <label className="absolute -bottom-2 -right-2 w-10 h-10 bg-brand-accent text-brand-primary rounded-xl flex items-center justify-center cursor-pointer shadow-lg hover:scale-110 transition-transform">
+              <Camera className="w-5 h-5" />
+              <input type="file" className="hidden" accept="image/*" onChange={handleAvatarChange} disabled={avatarLoading} />
+            </label>
+          </div>
+          <div className="text-center md:text-left">
+            <h3 className="text-2xl font-display font-bold text-black mb-1">{user?.fullName}</h3>
+            <p className="text-gray-400 text-sm mb-4">{user?.email}</p>
+            <div className="flex items-center gap-2 text-[10px] font-bold text-brand-accent bg-orange-50 px-3 py-1.5 rounded-full uppercase tracking-widest border border-orange-100 w-fit mx-auto md:mx-0">
+               <ShieldCheck className="w-3 h-3" /> Custom JWT Verified
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleUpdate} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 ml-1">Full Name</label>
+              <input 
+                type="text" 
+                value={form.fullName}
+                onChange={e => setForm({...form, fullName: e.target.value})}
+                className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-brand-accent transition-all"
+                placeholder="Ex. Srimanta Maharana"
+                required
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-extrabold uppercase tracking-widest text-gray-400 ml-1">Email Address</label>
+              <input 
+                type="email" 
+                value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})}
+                className="bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold text-black outline-none focus:border-brand-accent transition-all"
+                placeholder="hello@example.com"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="pt-4">
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full md:w-auto px-10 py-4 bg-black text-white rounded-2xl font-bold text-sm tracking-wide shadow-xl shadow-black/10 hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+            >
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</> : 'Save Changes'}
+            </button>
+          </div>
+
+          {msg.text && (
+            <div className={`mt-4 px-5 py-4 rounded-2xl text-xs font-bold border ${msg.type === 'success' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'}`}>
+              {msg.text}
+            </div>
+          )}
+        </form>
+      </div>
+
+      <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm">
+        <h4 className="text-xl font-display font-bold text-black mb-6">Security</h4>
+        <div className="flex items-center justify-between p-6 bg-gray-50 rounded-[2rem] border border-gray-100">
+           <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                <Lock className="w-6 h-6 text-gray-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-black">Password Management</p>
+                <p className="text-[10px] text-gray-400 font-medium tracking-wide">Update your password regularly for better security.</p>
+              </div>
+           </div>
+           <button className="px-6 py-2.5 bg-white border border-gray-100 rounded-xl text-xs font-bold hover:bg-gray-50 transition-all shadow-sm">
+              Change
+           </button>
+        </div>
+      </div>
+    </div>
   );
 }
