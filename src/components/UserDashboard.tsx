@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare } from "lucide-react";
+import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare, User, Loader2, Lock } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "motion/react";
 import { Product } from "../types";
