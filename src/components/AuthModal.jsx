@@ -81,7 +81,7 @@ export default function AuthModal({ isOpen, onClose }) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 32 }}
             transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            className="relative w-full max-w-lg bg-white/90 backdrop-blur-2xl rounded-[3rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20"
+            className="relative w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-[2rem] shadow-[0_32px_128px_-16px_rgba(0,0,0,0.3)] overflow-hidden border border-white/20"
           >
             {/* Top gradient accent */}
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-accent via-yellow-400 to-brand-accent animate-gradient-x" />
@@ -94,7 +94,7 @@ export default function AuthModal({ isOpen, onClose }) {
               <X className="w-5 h-5" />
             </button>
 
-            <div className="p-12 pt-16">
+            <div className="p-8 pt-10">
               {mode === 'forgot' ? (
                 <button 
                   onClick={() => switchMode('signin')}
@@ -103,18 +103,18 @@ export default function AuthModal({ isOpen, onClose }) {
                   <ArrowLeft className="w-3 h-3" /> Back to Sign In
                 </button>
               ) : (
-                <div className="flex items-center gap-3 mb-10">
-                   <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center text-white font-bold text-2xl shadow-xl shadow-black/20">R</div>
-                   <span className="text-3xl font-display font-bold tracking-tighter">RentHub</span>
+                <div className="flex items-center gap-2 mb-6">
+                   <div className="w-9 h-9 bg-black rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-black/20">R</div>
+                   <span className="text-2xl font-display font-bold tracking-tighter">RentHub</span>
                 </div>
               )}
 
               {/* Title */}
-              <div className="mb-10">
-                <h2 className="text-4xl font-display font-bold tracking-tighter leading-[0.9] mb-3">
+              <div className="mb-6">
+                <h2 className="text-2xl font-display font-bold tracking-tighter leading-tight mb-1.5">
                   {mode === 'signin' ? 'Welcome Back.' : mode === 'signup' ? 'Join the Hub.' : 'Reset Password.'}
                 </h2>
-                <p className="text-gray-400 text-sm font-medium">
+                <p className="text-gray-400 text-xs font-medium">
                   {mode === 'signin' ? 'Enter your credentials to access your account.' : 
                    mode === 'signup' ? 'Create an account to start buying and selling.' : 
                    'Enter your email to receive a recovery link.'}
@@ -123,28 +123,28 @@ export default function AuthModal({ isOpen, onClose }) {
 
               {/* Social Logins (Premium Placeholders) */}
               {mode !== 'forgot' && (
-                <div className="grid grid-cols-2 gap-4 mb-8">
-                  <button className="flex items-center justify-center gap-3 py-3.5 bg-gray-50 hover:bg-gray-100 rounded-2xl border border-gray-100 transition-all group">
-                    <Chrome className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                  <button className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group">
+                    <Chrome className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-bold">Google</span>
                   </button>
-                  <button className="flex items-center justify-center gap-3 py-3.5 bg-gray-50 hover:bg-gray-100 rounded-2xl border border-gray-100 transition-all group">
-                    <Github className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  <button className="flex items-center justify-center gap-2 py-2.5 bg-gray-50 hover:bg-gray-100 rounded-xl border border-gray-100 transition-all group">
+                    <Github className="w-4 h-4 group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-bold">GitHub</span>
                   </button>
                 </div>
               )}
 
               {mode !== 'forgot' && (
-                <div className="relative flex items-center gap-4 mb-8">
+                <div className="relative flex items-center gap-3 mb-5">
                   <div className="flex-1 h-px bg-gray-100" />
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-gray-300">or use email</span>
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-gray-300">or use email</span>
                   <div className="flex-1 h-px bg-gray-100" />
                 </div>
               )}
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3">
                 <AnimatePresence mode="popLayout">
                   {mode === 'signup' && (
                     <motion.div
@@ -261,7 +261,7 @@ export default function AuthModal({ isOpen, onClose }) {
                   disabled={loading}
                   whileHover={{ scale: loading ? 1 : 1.01 }}
                   whileTap={{ scale: loading ? 1 : 0.99 }}
-                  className="w-full py-4.5 bg-black text-white rounded-[1.4rem] font-bold text-sm tracking-wide hover:bg-gray-900 transition-all shadow-2xl shadow-black/20 disabled:opacity-60 flex items-center justify-center gap-3 mt-2"
+                  className="w-full py-3.5 bg-black text-white rounded-xl font-bold text-sm tracking-wide hover:bg-gray-900 transition-all shadow-xl shadow-black/20 disabled:opacity-60 flex items-center justify-center gap-3 mt-1"
                 >
                   {loading
                     ? <><Loader2 className="w-4 h-4 animate-spin" /> Processing Request...</>
@@ -271,8 +271,8 @@ export default function AuthModal({ isOpen, onClose }) {
               </form>
 
               {/* Footer Toggle */}
-              <div className="mt-10 text-center">
-                <p className="text-sm text-gray-400 font-medium">
+              <div className="mt-6 text-center">
+                <p className="text-xs text-gray-400 font-medium">
                   {mode === 'signin' ? "Don't have an account?" : mode === 'signup' ? "Already have an account?" : "Remember your password?"}
                   {' '}
                   <button 
@@ -285,8 +285,8 @@ export default function AuthModal({ isOpen, onClose }) {
               </div>
 
               {/* Security Badge */}
-              <div className="mt-12 pt-8 border-t border-gray-100 flex items-center justify-center gap-3 text-[10px] font-bold text-gray-300 uppercase tracking-widest">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <div className="mt-6 pt-5 border-t border-gray-100 flex items-center justify-center gap-2 text-[9px] font-bold text-gray-300 uppercase tracking-widest">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                 <span>End-to-End Encrypted Authentication</span>
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function AuthModal({ isOpen, onClose }) {
 
 function InputField({ icon, name, type, placeholder, value, onChange, required }) {
   return (
-    <div className="group relative flex items-center gap-4 bg-gray-50/50 border border-gray-100 rounded-[1.4rem] px-6 py-4.5 focus-within:border-black/20 focus-within:bg-white focus-within:shadow-lg focus-within:shadow-black/5 transition-all">
+    <div className="group relative flex items-center gap-3 bg-gray-50/50 border border-gray-100 rounded-xl px-4 py-3 focus-within:border-black/20 focus-within:bg-white focus-within:shadow-md focus-within:shadow-black/5 transition-all">
       <span className="text-gray-300 group-focus-within:text-black transition-colors">{icon}</span>
       <input
         name={name}
