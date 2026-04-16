@@ -605,6 +605,28 @@ app.get('/api/admin/activity', async (_req, res) => {
   }
 });
 
+// ─── AUTH SETTINGS & EMAIL ──────────────────────────
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
+
+// Verify email configuration on startup
+if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+  transporter.verify((error, success) => {
+    if (error) {
+      console.error('❌ Email Configuration Error:', error.message);
+    } else {
+      console.log('📧 Nodemailer is ready to send emails');
+    }
+  });
+} else {
+  console.warn('⚠️ EMAIL_USER or EMAIL_PASS missing. Password reset emails will fail.');
+}
+
 // ─── AUTH ROUTES ──────────────────────────────────────────
 
 const JWT_SECRET = process.env.JWT_SECRET || 'renthub_secret_key_change_in_production';
@@ -748,12 +770,16 @@ app.post('/api/auth/avatar', verifyToken, upload.single('avatar'), async (req: A
 // FORGOT PASSWORD
 app.post('/api/auth/forgot-password', async (req, res) => {
   try {
-    const { email } = req.body;
+    let { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required.' });
+    email = email.trim().toLowerCase();
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    // Always respond OK to prevent email enumeration
-    if (!user) return res.json({ message: 'If an account exists, a reset link has been sent.' });
+    const user = await User.findOne({ email });
+    // Always respond OK to prevent email enumeration, but log for developer
+    if (!user) {
+      console.log(`🔍 Password reset requested for non-existent email: ${email}`);
+      return res.json({ message: 'If an account exists, a reset link has been sent.' });
+    }
 
     // Generate secure token
     const token = crypto.randomBytes(32).toString('hex');
@@ -766,19 +792,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     const resetLink = `${frontendUrl}?reset_token=${token}`;
 
     // Send email via Nodemailer
-    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-      console.error('❌ EMAIL_USER or EMAIL_PASS env vars are not set!');
-      return res.status(500).json({ error: 'Email service not configured. Please contact support.' });
-    }
-
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     await transporter.sendMail({
       from: `"RentHub" <${process.env.EMAIL_USER}>`,
       to: user.email,
