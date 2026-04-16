@@ -822,7 +822,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
     res.json({ message: 'If an account exists, a reset link has been sent.' });
   } catch (err: any) {
     console.error('❌ Forgot password error:', err.message);
-    res.status(500).json({ error: 'Failed to send reset email. Please try again.' });
+    res.status(500).json({ error: `Mail failure: ${err.message}` });
   }
 });
 
