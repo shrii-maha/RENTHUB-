@@ -87,7 +87,20 @@ if (!process.env.MONGODB_URI) {
 }
 
 mongoose.connect(MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB Atlas'))
+  .then(() => {
+    console.log('✅ Connected to MongoDB Atlas');
+    
+    // One-time Admin Role Swap
+    setTimeout(async () => {
+      try {
+        await User.updateOne({ email: 'srimantamaharana886@gmail.com' }, { role: 'user' });
+        await User.updateOne({ email: 'renthub.marketplace@gmail.com' }, { role: 'admin' });
+        console.log('✅ Admin roles swapped successfully: renthub.marketplace is now Admin.');
+      } catch (err: any) {
+        console.error('Failed to swap admin roles:', err.message);
+      }
+    }, 5000);
+  })
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
     process.exit(1);
