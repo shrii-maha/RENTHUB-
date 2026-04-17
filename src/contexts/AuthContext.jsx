@@ -101,7 +101,7 @@ export function AuthProvider({ children }) {
       token,
       loading,
       isSignedIn: !!user,
-      isAdmin: user?.email === adminEmail || user?.role === 'admin',
+      isAdmin: user?.role === 'admin',
       login,
       register,
       logout,
