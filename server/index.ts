@@ -93,9 +93,9 @@ mongoose.connect(MONGODB_URI)
     // One-time Admin Role Swap
     setTimeout(async () => {
       try {
-        await User.updateOne({ email: 'srimantamaharana886@gmail.com' }, { role: 'user' });
-        await User.updateOne({ email: 'renthub.marketplace@gmail.com' }, { role: 'admin' });
-        console.log('✅ Admin roles swapped successfully: renthub.marketplace is now Admin.');
+        await User.updateOne({ email: 'srimantamaharana886@gmail.com' }, { role: 'admin' });
+        await User.updateOne({ email: 'renthub.marketplace@gmail.com' }, { role: 'user' });
+        console.log('✅ Admin roles swapped successfully: srimantamaharana886 is now Admin.');
       } catch (err: any) {
         console.error('Failed to swap admin roles:', err.message);
       }
