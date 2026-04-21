@@ -54,7 +54,7 @@ export default function App() {
   const [listings, setListings] = useState([]);
   const [searchFilters, setSearchFilters] = useState();
 
-  const { user, isSignedIn } = useAuth();
+  const { user, isSignedIn, token } = useAuth();
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -92,7 +92,10 @@ export default function App() {
     try {
       const res = await fetch('/api/listings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}`
+        },
         body: JSON.stringify(newItem),
         signal: controller.signal
       });
@@ -128,7 +131,10 @@ export default function App() {
 
   const handleDeleteListing = async (id) => {
     try {
-      await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+      await fetch(`/api/listings/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}` }
+      });
     } catch {
       // Continue with local delete even if API fails
     }
