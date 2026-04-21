@@ -99,6 +99,16 @@ mongoose.connect(MONGODB_URI)
       } catch (err: any) {
         console.error('Failed to swap admin roles:', err.message);
       }
+      
+      // One-time Index Drop for legacy clerkId
+      try {
+        await mongoose.connection.collection('users').dropIndex('clerkId_1');
+        console.log('✅ Successfully dropped legacy clerkId_1 index.');
+      } catch (err: any) {
+        if (err.code !== 27) { // 27 means IndexNotFound
+          console.error('Failed to drop clerkId_1 index:', err.message);
+        }
+      }
     }, 5000);
   })
   .catch((err) => {
@@ -791,7 +801,55 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// LOGIN
+// CLERK SYNC — called by frontend when Clerk signs in/up a user
+// Creates or updates the user in MongoDB and returns a JWT token
+app.post('/api/auth/clerk-sync', async (req, res) => {
+  try {
+    const { clerkId, email, fullName, avatar } = req.body;
+    if (!clerkId || !email) {
+      return res.status(400).json({ error: 'clerkId and email are required.' });
+    }
+
+    const adminEmail = process.env.VITE_ADMIN_EMAIL || 'admin@renthub.com';
+    const role = email.toLowerCase() === adminEmail.toLowerCase() ? 'admin' : 'user';
+
+    // Upsert by clerkId first, then fall back to email
+    let user = await User.findOne({ clerkId }) as any;
+    if (!user) {
+      user = await User.findOne({ email: email.toLowerCase() }) as any;
+    }
+
+    if (!user) {
+      // New user — create account
+      user = await User.create({
+        clerkId,
+        fullName: fullName || email.split('@')[0],
+        email: email.toLowerCase(),
+        password: await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 12), // random password — user logs in via Clerk
+        avatar: avatar || '',
+        role,
+        lastActiveAt: new Date()
+      });
+      console.log(`✅ Clerk user created in MongoDB: ${user.email}`);
+    } else {
+      // Existing user — sync clerkId and update profile
+      user.clerkId = clerkId;
+      if (fullName && !user.fullName) user.fullName = fullName;
+      if (avatar && !user.avatar) user.avatar = avatar;
+      user.lastActiveAt = new Date();
+      await user.save();
+      console.log(`🔄 Clerk user synced: ${user.email}`);
+    }
+
+    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+    const { password: _, ...userWithoutPassword } = user.toObject();
+    res.json({ token, user: userWithoutPassword });
+  } catch (err: any) {
+    console.error('❌ Clerk sync error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;

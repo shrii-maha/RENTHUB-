@@ -2,12 +2,25 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const AuthContext = createContext(null);
 
+// Check if Clerk is enabled (key present and not placeholder)
+const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+const isClerkEnabled = CLERK_KEY && !CLERK_KEY.includes('YOUR_CLERK_KEY');
+
+// Lazy Clerk hook — only imported when Clerk is actually enabled
+let useClerkUser = () => ({ user: null, isLoaded: true, isSignedIn: false });
+let useClerkSignOut = () => ({ signOut: async () => {} });
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [dbUser, setDbUser] = useState(null);
   const [token, setToken] = useState(() => localStorage.getItem('rh_token'));
   const [loading, setLoading] = useState(true);
+  const [clerkUser, setClerkUser] = useState(null);
+  const [clerkSignedIn, setClerkSignedIn] = useState(false);
+  const [clerkLoaded, setClerkLoaded] = useState(!isClerkEnabled); // if no Clerk, treat as loaded
 
-  // Restore session on mount
+  // ---------------------------------------------------------
+  // 1. Restore custom JWT session on mount
+  // ---------------------------------------------------------
   useEffect(() => {
     const storedToken = localStorage.getItem('rh_token');
     if (storedToken) {
@@ -16,13 +29,13 @@ export function AuthProvider({ children }) {
       })
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(userData => {
-          setUser(userData);
+          setDbUser(userData);
           setToken(storedToken);
         })
         .catch(() => {
           localStorage.removeItem('rh_token');
           setToken(null);
-          setUser(null);
+          setDbUser(null);
         })
         .finally(() => setLoading(false));
     } else {
@@ -30,6 +43,20 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // ---------------------------------------------------------
+  // 2. Sync Clerk state into local state (only if Clerk enabled)
+  // ---------------------------------------------------------
+  useEffect(() => {
+    if (!isClerkEnabled) return;
+
+    // Dynamically use Clerk hooks via an inner component approach
+    // We poll Clerk's window object as a fallback since we can't
+    // use hooks conditionally. The ClerkProvider bridge does this.
+  }, []);
+
+  // ---------------------------------------------------------
+  // Custom JWT methods
+  // ---------------------------------------------------------
   const login = useCallback(async (email, password) => {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
@@ -40,7 +67,7 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error(data.error || 'Login failed');
     localStorage.setItem('rh_token', data.token);
     setToken(data.token);
-    setUser(data.user);
+    setDbUser(data.user);
     return data.user;
   }, []);
 
@@ -54,20 +81,48 @@ export function AuthProvider({ children }) {
     if (!res.ok) throw new Error(data.error || 'Registration failed');
     localStorage.setItem('rh_token', data.token);
     setToken(data.token);
-    setUser(data.user);
+    setDbUser(data.user);
     return data.user;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     localStorage.removeItem('rh_token');
     setToken(null);
-    setUser(null);
+    setDbUser(null);
+  }, []);
+
+  const syncClerkUser = useCallback(async (clerkUserData) => {
+    if (!clerkUserData) return;
+    const primaryEmail = clerkUserData.primaryEmailAddress?.emailAddress;
+    if (!primaryEmail) return;
+
+    try {
+      const res = await fetch('/api/auth/clerk-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clerkId: clerkUserData.id,
+          email: primaryEmail,
+          fullName: clerkUserData.fullName || clerkUserData.firstName || primaryEmail.split('@')[0],
+          avatar: clerkUserData.imageUrl || '',
+        })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.token) {
+        localStorage.setItem('rh_token', data.token);
+        setToken(data.token);
+        setDbUser(data.user);
+      }
+    } catch (err) {
+      console.error('Clerk sync failed:', err);
+    }
   }, []);
 
   const updateProfile = useCallback(async (data) => {
     const res = await fetch('/api/auth/profile', {
       method: 'PUT',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
@@ -75,36 +130,34 @@ export function AuthProvider({ children }) {
     });
     const updatedUser = await res.json();
     if (!res.ok) throw new Error(updatedUser.error || 'Update failed');
-    setUser(updatedUser);
+    setDbUser(updatedUser);
     return updatedUser;
   }, [token]);
 
   const updateAvatar = useCallback(async (formData) => {
     const res = await fetch('/api/auth/avatar', {
       method: 'POST',
-      headers: { 
-        Authorization: `Bearer ${token}`
-      },
+      headers: { Authorization: `Bearer ${token}` },
       body: formData
     });
     const updatedUser = await res.json();
     if (!res.ok) throw new Error(updatedUser.error || 'Avatar upload failed');
-    setUser(updatedUser);
+    setDbUser(updatedUser);
     return updatedUser;
   }, [token]);
 
-  const adminEmail = import.meta.env.VITE_ADMIN_EMAIL || 'admin@renthub.com';
-
   return (
     <AuthContext.Provider value={{
-      user,
+      user: dbUser,
       token,
       loading,
-      isSignedIn: !!user,
-      isAdmin: user?.role === 'admin',
+      isSignedIn: !!dbUser,
+      isAdmin: dbUser?.role === 'admin',
+      isClerkEnabled,
       login,
       register,
       logout,
+      syncClerkUser,   // exposed so ClerkBridge can call it
       updateProfile,
       updateAvatar,
     }}>

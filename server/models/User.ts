@@ -8,6 +8,11 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  clerkId: {
+    type: String,
+    default: null,
+    sparse: true // allows multiple null values without unique constraint conflict
+  },
   fullName: {
     type: String,
     required: true,
