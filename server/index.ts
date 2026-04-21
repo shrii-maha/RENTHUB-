@@ -250,7 +250,11 @@ app.post('/api/listings', verifyToken, async (req: AuthRequest, res) => {
     console.log('📦 Listing Attempt:', req.body.title);
     
     // Remove 'id' if it exists to let Mongoose generate '_id'
-    const listingData = { ...req.body };
+    const listingData = { 
+      ...req.body,
+      status: 'approved',
+      sellerId: req.user?.email || req.body.sellerId
+    };
     delete listingData.id;
 
     console.log('⏳ Saving Listing to Database...');
