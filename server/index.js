@@ -18,6 +18,7 @@ import crypto from 'crypto';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
+import { GoogleGenAI } from "@google/genai";
 
 // Models
 import Listing from './models/Listing.js';
@@ -29,23 +30,10 @@ import ChatSession from './models/ChatSession.js';
 import ChatMessage from './models/ChatMessage.js';
 import Notification from './models/Notification.js';
 
-// Auth Middleware
-const verifyToken = (req, res, next) => {
-  const token = req.headers['authorization']?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
-    req.user = decoded;
-    next();
-  } catch (err) {
-    res.status(400).json({ error: 'Invalid token.' });
-  }
-};
-
 dotenv.config();
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }) : null;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -61,6 +49,17 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
+
+// Auth Middleware
+const verifyToken = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    req.user = decoded;
+    next();
+  } catch (err) { res.status(400).json({ error: 'Invalid token.' }); }
+};
 
 // JWT Generator
 const generateJWT = (user) => {
@@ -82,11 +81,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       const email = profile.emails?.[0]?.value;
       let user = await User.findOne({ email });
       if (!user) {
-        user = new User({
-          fullName: profile.displayName || 'Google User',
-          email,
-          avatar: profile.photos?.[0]?.value || '',
-        });
+        user = new User({ fullName: profile.displayName || 'Google User', email, avatar: profile.photos?.[0]?.value || '' });
         await user.save();
       }
       return done(null, user);
@@ -104,11 +99,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
       let email = profile.emails?.[0]?.value || `${profile.username}@github.local`;
       let user = await User.findOne({ email });
       if (!user) {
-        user = new User({
-          fullName: profile.displayName || profile.username || 'GitHub User',
-          email,
-          avatar: profile.photos?.[0]?.value || '',
-        });
+        user = new User({ fullName: profile.displayName || profile.username || 'GitHub User', email, avatar: profile.photos?.[0]?.value || '' });
         await user.save();
       }
       return done(null, user);
@@ -137,27 +128,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: { folder: 'renthub', allowed_formats: ['jpg', 'png', 'jpeg', 'webp'] }
-});
-const upload = multer({ storage });
-
-// Database
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/renthub')
-  .then(() => console.log('✅ Connected to MongoDB Atlas'))
-  .catch(err => console.error('❌ MongoDB error:', err));
-
-import { GoogleGenerativeAI } from "@google/genai";
-
-// --- HELPERS ---
+// Helpers
 const getCoordinates = async (location) => {
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
     const data = await res.json();
-    if (data && data[0]) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
+    if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch (err) { console.error('Geocoding failed:', err); }
   return null;
 };
@@ -281,54 +257,6 @@ app.get('/api/orders/buyer/:email', verifyToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// --- CHAT ROUTES ---
-app.post('/api/chat/sessions', verifyToken, async (req, res) => {
-  try {
-    const { sellerId, listingId } = req.body;
-    let session = await ChatSession.findOne({ 
-      participants: { $all: [req.user.email, sellerId] },
-      listingId 
-    });
-    if (!session) {
-      session = new ChatSession({ participants: [req.user.email, sellerId], listingId });
-      await session.save();
-    }
-    res.json(session);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/api/chat/sessions/:email', verifyToken, async (req, res) => {
-  try {
-    const sessions = await ChatSession.find({ participants: req.params.email }).sort({ updatedAt: -1 });
-    res.json(sessions);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.get('/api/chat/messages/:sessionId', verifyToken, async (req, res) => {
-  try {
-    const messages = await ChatMessage.find({ sessionId: req.params.sessionId }).sort({ createdAt: 1 });
-    res.json(messages);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-app.post('/api/chat/messages', verifyToken, async (req, res) => {
-  try {
-    const message = new ChatMessage({ ...req.body, senderId: req.user.email });
-    await message.save();
-    await ChatSession.findByIdAndUpdate(req.body.sessionId, { lastMessage: req.body.text, lastMessageAt: Date.now() });
-    res.status(201).json(message);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// --- REVIEW ROUTES ---
-app.post('/api/reviews', verifyToken, async (req, res) => {
-  try {
-    const review = new Review({ ...req.body, reviewerId: req.user.email });
-    await review.save();
-    res.status(201).json(review);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
 // Admin
 app.get('/api/admin/stats', verifyToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
@@ -361,17 +289,54 @@ app.patch('/api/admin/listings/:id/status', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
+// Chat
+app.post('/api/chat/sessions', verifyToken, async (req, res) => {
+  try {
+    const { sellerId, listingId } = req.body;
+    let session = await ChatSession.findOne({ participants: { $all: [req.user.email, sellerId] }, listingId });
+    if (!session) { session = new ChatSession({ participants: [req.user.email, sellerId], listingId }); await session.save(); }
+    res.json(session);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/chat/sessions/:email', verifyToken, async (req, res) => {
+  try {
+    const sessions = await ChatSession.find({ participants: req.params.email }).sort({ updatedAt: -1 });
+    res.json(sessions);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/chat/messages/:sessionId', verifyToken, async (req, res) => {
+  try {
+    const messages = await ChatMessage.find({ sessionId: req.params.sessionId }).sort({ createdAt: 1 });
+    res.json(messages);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/chat/messages', verifyToken, async (req, res) => {
+  try {
+    const message = new ChatMessage({ ...req.body, senderId: req.user.email });
+    await message.save();
+    await ChatSession.findByIdAndUpdate(req.body.sessionId, { lastMessage: req.body.text, lastMessageAt: Date.now() });
+    res.status(201).json(message);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // AI Chat
-const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenerativeAI(process.env.GOOGLE_GENAI_API_KEY) : null;
 app.post('/api/chat', async (req, res) => {
   if (!genAI) return res.status(500).json({ error: 'AI not configured' });
   try {
     const { message } = req.body;
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(message);
+    const model = genAI.models.get('gemini-1.5-flash');
+    const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: message }] }] });
     res.json({ text: result.response.text() });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // Server Start
-httpServer.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  mongoose.connect(process.env.MONGODB_URI)
+    .then(() => console.log('✅ Connected to MongoDB Atlas'))
+    .catch(err => console.error('❌ MongoDB error:', err));
+});
