@@ -58,6 +58,97 @@ if (!fs.existsSync(uploadsDir)) {
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
+
+// --- Passport Strategies Setup ---
+const generateJWT = (user: any) => {
+  return jwt.sign(
+    { _id: user._id, email: user.email, role: user.role, fullName: user.fullName, avatar: user.avatar },
+    process.env.JWT_SECRET || 'fallback_secret',
+    { expiresIn: '7d' }
+  );
+};
+
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "/api/auth/google/callback"
+    },
+    async (accessToken, refreshToken, profile, done) => {
+      try {
+        let email = profile.emails?.[0]?.value;
+        if (!email) return done(new Error("No email found"));
+        
+        let user = await User.findOne({ email });
+        if (!user) {
+          user = new User({
+            fullName: profile.displayName || 'Google User',
+            email: email,
+            avatar: profile.photos?.[0]?.value || '',
+          });
+          await user.save();
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err as Error);
+      }
+    }
+  ));
+}
+
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  passport.use(new GitHubStrategy({
+      clientID: process.env.GITHUB_CLIENT_ID,
+      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      callbackURL: "/api/auth/github/callback"
+    },
+    async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+      try {
+        let email = profile.emails?.[0]?.value;
+        if (!email) {
+          // GitHub might not return public email, fallback
+          email = `${profile.username}@github.local`;
+        }
+        
+        let user = await User.findOne({ email });
+        if (!user) {
+          user = new User({
+            fullName: profile.displayName || profile.username || 'GitHub User',
+            email: email,
+            avatar: profile.photos?.[0]?.value || '',
+          });
+          await user.save();
+        }
+        return done(null, user);
+      } catch (err) {
+        return done(err as Error);
+      }
+    }
+  ));
+}
+
+// --- OAuth Routes ---
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
+
+app.get('/api/auth/google/callback', 
+  passport.authenticate('google', { session: false, failureRedirect: `${FRONTEND_URL}/?error=google_auth_failed` }),
+  (req, res) => {
+    const token = generateJWT(req.user);
+    res.redirect(`${FRONTEND_URL}/?token=${token}`);
+  }
+);
+
+app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email'], session: false }));
+
+app.get('/api/auth/github/callback', 
+  passport.authenticate('github', { session: false, failureRedirect: `${FRONTEND_URL}/?error=github_auth_failed` }),
+  (req, res) => {
+    const token = generateJWT(req.user);
+    res.redirect(`${FRONTEND_URL}/?token=${token}`);
+  }
+);
 app.use('/uploads', express.static(uploadsDir));
 
 // Cloudinary config

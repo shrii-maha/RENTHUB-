@@ -136,13 +136,14 @@ If you don't know a specific listing detail, encourage the user to browse the Ma
         style={{
           position: 'fixed', bottom: 30, right: 30,
           width: 64, height: 64, borderRadius: '50%',
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #333 100%)',
+          backgroundColor: '#000000',
           color: 'white', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', cursor: 'pointer', zIndex: 1000,
-          boxShadow: '0 12px 30px rgba(0,0,0,0.3)', border: 'none',
+          justifyContent: 'center', cursor: 'pointer', zIndex: 9999,
+          boxShadow: '-6px -6px 20px rgba(255, 165, 0, 0.4), 0 12px 30px rgba(0,0,0,0.3)',
+          border: '1px solid rgba(255, 165, 0, 0.2)',
         }}
       >
-        {isOpen ? <X size={28} /> : <MessageSquare size={28} />}
+        {isOpen ? <X size={28} /> : <MessageSquare size={28} color="white" fill="white" />}
       </motion.button>
 
       {/* Chat Window */}
