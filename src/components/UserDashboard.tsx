@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { X, LayoutDashboard, ShoppingBag, Wallet, LogOut, Plus, ChevronRight, CheckCircle2, Clock, Landmark, ArrowUpRight, ShieldCheck, MoreHorizontal, Camera, Box, Heart, Rocket, Pencil, Trash2, Truck, PackageCheck, Star, MessageSquare, User as UserIcon, Loader2 as LoaderIcon, Lock as LockIcon } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "motion/react";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Product } from "../types";
 import ReceiptModal from "./ReceiptModal";
 import ReviewModal from "./ReviewModal";
@@ -116,6 +117,37 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   };
 
   const rawEarnings = availableBalance + pendingEarnings + processingBalance + lifetimePaid;
+
+  // Calculate Chart Data (last 30 days of earnings)
+  const chartData = React.useMemo(() => {
+    const data = [];
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const dailyOrders = orders.filter(o => {
+        if (!o.createdAt) return false;
+        return new Date(o.createdAt).toISOString().split('T')[0] === dateStr && o.status !== 'refunded';
+      });
+      
+      const total = dailyOrders.reduce((sum, order) => {
+        const listing = order.listingId;
+        const type = listing?.type || "Sale";
+        const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
+        const feePercent = type === 'Sale' ? 5 : 15;
+        const platformFee = Math.floor(basePrice * (feePercent / 100));
+        return sum + (basePrice - platformFee);
+      }, 0);
+
+      data.push({
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        earnings: total
+      });
+    }
+    return data;
+  }, [orders]);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
@@ -241,6 +273,57 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                         onWithdraw={() => handleWithdrawRequest()}
                         isRequesting={requestingPayout}
                       />
+
+                      {/* Earnings Chart Section */}
+                      <div className="bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-sm mb-8 mt-8">
+                        <div className="flex justify-between items-center mb-6">
+                          <h3 className="text-xl font-bold font-display italic text-black">Revenue Over Time</h3>
+                          <span className="text-xs font-bold text-gray-400 bg-gray-50 px-4 py-2 rounded-full uppercase tracking-widest">Last 30 Days</span>
+                        </div>
+                        <div className="h-[250px] w-full">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                              <defs>
+                                <linearGradient id="colorEarnings" x1="0" y1="0" x2="0" y2="1">
+                                  <stop offset="5%" stopColor="#000000" stopOpacity={0.1}/>
+                                  <stop offset="95%" stopColor="#000000" stopOpacity={0}/>
+                                </linearGradient>
+                              </defs>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                              <XAxis 
+                                dataKey="date" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                dy={10}
+                              />
+                              <YAxis 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fontSize: 10, fill: '#9ca3af' }}
+                                tickFormatter={(value) => `₹${value.toLocaleString()}`}
+                                width={60}
+                              />
+                              <Tooltip 
+                                cursor={{ stroke: '#e5e7eb', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}
+                                formatter={(value: number) => [`₹${value.toLocaleString()}`, 'Earnings']}
+                                labelStyle={{ color: '#9ca3af', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}
+                              />
+                              <Area 
+                                type="monotone" 
+                                dataKey="earnings" 
+                                stroke="#000000" 
+                                strokeWidth={3}
+                                fillOpacity={1} 
+                                fill="url(#colorEarnings)" 
+                                animationDuration={1500}
+                              />
+                            </AreaChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
                       <TransactionHistory orders={orders} setOrders={setOrders} />
                     </motion.div>
                   )}

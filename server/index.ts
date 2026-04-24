@@ -26,6 +26,7 @@ import Review from './models/Review.js';
 import { GoogleGenAI } from "@google/genai";
 import ChatSession from './models/ChatSession.js';
 import ChatMessage from './models/ChatMessage.js';
+import Notification from './models/Notification.js';
 import { verifyToken, AuthRequest } from './middleware/auth.js';
 
 dotenv.config();
@@ -410,6 +411,25 @@ app.get('/api/listings/seller/:id', async (req, res) => {
   }
 });
 
+// ─── NOTIFICATION ROUTES ──────────────────────────────────
+app.get('/api/notifications/:email', verifyToken, async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.params.email }).sort({ createdAt: -1 }).limit(30);
+    res.json(notifications);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/notifications/:id/read', verifyToken, async (req, res) => {
+  try {
+    await Notification.findByIdAndUpdate(req.params.id, { read: true });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── ORDER ROUTES ──────────────────────────────────────────
 
 // CREATE order
@@ -432,6 +452,15 @@ app.post('/api/orders', verifyToken, async (req: AuthRequest, res) => {
       details: `₹${order.amount.toLocaleString()} in escrow for listing ${listing ? listing.title : order.listingId}`
     });
     await activity.save();
+    
+    if (listing) {
+      const notif = new Notification({
+        userId: order.sellerId,
+        type: 'order_placed',
+        message: `New order placed for "${listing.title}". ₹${order.amount.toLocaleString()} is securely held in Escrow.`
+      });
+      await notif.save();
+    }
 
     console.log('💰 New Order placed in Escrow:', order._id);
     res.status(201).json(order);
@@ -453,6 +482,13 @@ app.patch('/api/orders/:id/ship', async (req, res) => {
     order.shippingNote = shippingNote || '';
     order.deliveryMethod = deliveryMethod || 'shipping';
     await order.save();
+    
+    const notif = new Notification({
+      userId: order.buyerId,
+      type: 'order_shipped',
+      message: `Your order has been shipped by the seller. Tracking: ${trackingNumber || 'N/A'}`
+    });
+    await notif.save();
 
     console.log(`🚚 Order ${order._id} marked as shipped`);
     res.json(order);
@@ -479,6 +515,13 @@ app.patch('/api/orders/:id/confirm-delivery', async (req, res) => {
       details: `Buyer confirmed delivery — escrow released for order ${order._id}`
     });
     await activity.save();
+
+    const notif = new Notification({
+      userId: order.sellerId,
+      type: 'order_delivered',
+      message: `Buyer confirmed delivery! ₹${order.amount.toLocaleString()} has been released to your Available Balance.`
+    });
+    await notif.save();
 
     console.log(`✅ Escrow released for order ${order._id}`);
     res.json(order);
@@ -710,6 +753,15 @@ app.patch('/api/admin/listings/:id/status', async (req, res) => {
       details: `${listing.title} was ${status}`
     });
     await activity.save();
+    
+    if (status === 'approved') {
+      const notif = new Notification({
+        userId: listing.sellerId,
+        type: 'listing_approved',
+        message: `Your listing "${listing.title}" has been approved by the admin and is now live!`
+      });
+      await notif.save();
+    }
 
     res.json(listing);
   } catch (err: any) {

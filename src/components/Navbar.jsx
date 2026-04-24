@@ -1,10 +1,49 @@
-import { useState } from "react";
-import { Menu, Shield, LayoutDashboard, X, LogOut, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Menu, Shield, LayoutDashboard, X, LogOut, User, Bell } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 
 export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSection, onOpenDashboard, onCategorySelect, onOpenAuth }) {
   const { user, isSignedIn, isAdmin, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  useEffect(() => {
+    if (isSignedIn && user?.email) {
+      fetchNotifications();
+    }
+  }, [isSignedIn, user]);
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('rh_token');
+      if (!token) return;
+      const res = await fetch(`/api/notifications/${user.email}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch notifications:", err);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('rh_token');
+      await fetch(`/api/notifications/${id}/read`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
 
   const getInitials = (name) => {
     if (!name) return 'U';
@@ -70,10 +109,60 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
               </>
             )}
 
+            {/* Notifications Dropdown */}
+            <div className="relative">
+              <button 
+                onClick={() => {
+                  setShowNotifications(prev => !prev);
+                  if (showUserMenu) setShowUserMenu(false);
+                }}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors relative shadow-sm"
+              >
+                <Bell className="w-5 h-5 text-gray-600" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
+                )}
+              </button>
+
+              {showNotifications && (
+                <div className="absolute right-0 top-12 bg-white rounded-2xl shadow-2xl border border-gray-100 w-80 z-50 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                    <span className="font-bold text-sm text-black">Notifications</span>
+                    {unreadCount > 0 && (
+                      <span className="text-xs bg-brand-primary text-white px-2 py-0.5 rounded-full">{unreadCount} new</span>
+                    )}
+                  </div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-center text-gray-500 text-sm">No notifications yet</div>
+                    ) : (
+                      notifications.map(n => (
+                        <div 
+                          key={n._id} 
+                          onClick={() => {
+                            if (!n.read) markAsRead(n._id);
+                          }}
+                          className={`p-4 border-b border-gray-50 text-sm cursor-pointer transition-colors ${n.read ? 'bg-white opacity-60' : 'bg-brand-accent/5 hover:bg-brand-accent/10'}`}
+                        >
+                          <p className="text-gray-800 leading-snug">{n.message}</p>
+                          <span className="text-[10px] text-gray-400 mt-1 block uppercase tracking-wider font-semibold">
+                            {new Date(n.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* User Avatar + Dropdown */}
             <div className="relative">
               <button
-                onClick={() => setShowUserMenu(prev => !prev)}
+                onClick={() => {
+                  setShowUserMenu(prev => !prev);
+                  if (showNotifications) setShowNotifications(false);
+                }}
                 className="w-9 h-9 rounded-full bg-brand-primary text-white font-bold text-sm flex items-center justify-center hover:scale-110 transition-transform shadow-md"
                 title={user?.fullName}
               >
