@@ -139,8 +139,8 @@ If you don't know a specific listing detail, encourage the user to browse the Ma
           backgroundColor: '#000000',
           color: 'white', display: 'flex', alignItems: 'center',
           justifyContent: 'center', cursor: 'pointer', zIndex: 9999,
-          boxShadow: '-6px -6px 20px rgba(255, 165, 0, 0.4), 0 12px 30px rgba(0,0,0,0.3)',
-          border: '1px solid rgba(255, 165, 0, 0.2)',
+          boxShadow: '0 12px 30px rgba(0,0,0,0.3)',
+          border: 'none',
         }}
       >
         {isOpen ? <X size={28} /> : <MessageSquare size={28} color="white" fill="white" />}
