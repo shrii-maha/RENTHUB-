@@ -37,7 +37,21 @@ RentHub includes a persistent, real-time messaging system allowing buyers and se
 - **Floating Chat:** The chat interface exists as a persistent, floating widget (`FloatingChat.jsx`) accessible from anywhere on the site.
 - **Real-Time Delivery:** Messages are routed instantly through the Socket.io Node server (`server/index.ts`). Unread message counts are tracked and updated automatically.
 
-## 5. Security & Roles
+## 5. In-App Notifications
+RentHub features a real-time notification engine to keep users informed about their marketplace activities.
+- **Triggers:** Notifications are automatically generated and saved to the database when:
+  - An Admin approves a seller's pending listing.
+  - A Buyer places an order (notifying the seller).
+  - A Seller ships an order (notifying the buyer).
+  - A Buyer confirms delivery (notifying the seller that funds are released).
+- **Interface:** Users view their alerts via a dropdown Bell icon in the `Navbar`. The icon displays a red dot if unread notifications exist. Clicking a notification marks it as read in the database.
+
+## 6. Seller Revenue Analytics
+To empower sellers, RentHub provides visual data insights directly in the User Dashboard.
+- **Data Processing:** The frontend dynamically parses the seller's order history (`orders` array), aggregates daily revenue, and deducts the appropriate platform fees (5% for Sales, 15% for Rentals).
+- **Visualization:** Using the `recharts` library, the "Earnings" tab renders a fully interactive `AreaChart` that plots the seller's net revenue over the trailing 30 days.
+
+## 7. Security & Roles
 - **Role-Based Access:** The platform differentiates between standard `user` and `admin` roles. 
 - **Admin Email:** The admin user is defined by the `VITE_ADMIN_EMAIL` environment variable. Logging in with this email grants access to the Admin Panel (Approvals, User Directory, Payout Ledger, Site Analytics).
 - **Protected Routes:** Backend modifications (creating listings, modifying orders, updating profiles) require a valid `Bearer` token validated by the `verifyToken` middleware.
