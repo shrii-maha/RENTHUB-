@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Star, MapPin, Heart, ArrowUpRight, X, ShieldCheck, MessageSquare } from "lucide-react";
+import { Star, MapPin, Heart, ArrowUpRight, X, ShieldCheck, MessageSquare, LayoutGrid, Map as MapIcon } from "lucide-react";
+import MapView from "./MapView";
 
 // Sub-component for individual listing to handle "Honest Trust" data fetching
 function MarketplaceItem({ 
@@ -125,6 +126,7 @@ function MarketplaceItem({
 
 export default function Marketplace({ listings, searchFilters, onProductSelect, onOpenChat }) {
   const [activeType, setActiveType] = useState('All');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'map'
   const [wishlist, setWishlist] = useState([]);
 
   const toggleWishlist = (id) => {
@@ -144,7 +146,7 @@ export default function Marketplace({ listings, searchFilters, onProductSelect, 
   return (
     <section className="py-32 px-6 md:px-12 min-h-screen">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between mb-16 gap-6">
           <div>
             <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-brand-primary/40 mb-4 block">Marketplace</span>
             <h2 className="text-5xl md:text-7xl font-display font-bold leading-tight">
@@ -157,20 +159,49 @@ export default function Marketplace({ listings, searchFilters, onProductSelect, 
             )}
           </div>
 
-          <div className="flex items-center gap-2 p-1 bg-brand-muted rounded-full">
-            {['All', 'Sale', 'Rent'].map(type => (
+          <div className="flex flex-wrap items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-1 p-1 bg-brand-muted rounded-2xl border border-brand-primary/5">
               <button
-                key={type}
-                onClick={() => setActiveType(type)}
-                className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
-                  activeType === type
-                    ? 'bg-brand-primary text-white shadow-lg'
-                    : 'text-brand-primary/60 hover:text-brand-primary'
+                onClick={() => setViewMode('grid')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-white text-brand-primary shadow-sm'
+                    : 'text-brand-primary/40 hover:text-brand-primary'
                 }`}
               >
-                {type}
+                <LayoutGrid className="w-3.5 h-3.5" />
+                Grid
               </button>
-            ))}
+              <button
+                onClick={() => setViewMode('map')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  viewMode === 'map'
+                    ? 'bg-white text-brand-primary shadow-sm'
+                    : 'text-brand-primary/40 hover:text-brand-primary'
+                }`}
+              >
+                <MapIcon className="w-3.5 h-3.5" />
+                Map
+              </button>
+            </div>
+
+            {/* Type Toggle */}
+            <div className="flex items-center gap-2 p-1 bg-brand-muted rounded-full">
+              {['All', 'Sale', 'Rent'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => setActiveType(type)}
+                  className={`px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
+                    activeType === type
+                      ? 'bg-brand-primary text-white shadow-lg'
+                      : 'text-brand-primary/60 hover:text-brand-primary'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -180,15 +211,17 @@ export default function Marketplace({ listings, searchFilters, onProductSelect, 
             <p className="text-2xl font-display font-bold">No items found</p>
             <p className="text-sm mt-2">Try adjusting your search or filters</p>
           </div>
+        ) : viewMode === 'map' ? (
+          <MapView listings={filtered} onProductSelect={onProductSelect} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-16">
             {filtered.map((item, i) => (
               <MarketplaceItem 
-                key={item.id}
+                key={item._id || item.id}
                 item={item}
                 index={i}
                 onProductSelect={onProductSelect}
-                isWishlisted={wishlist.includes(item.id)}
+                isWishlisted={wishlist.includes(item._id || item.id)}
                 onToggleWishlist={toggleWishlist}
                 onOpenChat={onOpenChat}
               />
