@@ -12,8 +12,6 @@ interface AddItemModalProps {
 export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
   const { user, isSignedIn } = useAuth();
 
-  if (!isSignedIn || !user) return null;
-
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -32,6 +30,8 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
     image: "",
     images: [] as string[],
   });
+
+  if (!isSignedIn || !user) return null;
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;

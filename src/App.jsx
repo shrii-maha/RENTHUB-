@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
 import Categories from "./components/Categories";
@@ -6,11 +6,11 @@ import FeaturedListings from "./components/FeaturedListings";
 import HowItWorks from "./components/HowItWorks";
 import Footer from "./components/Footer";
 import AddItemModal from "./components/AddItemModal";
-import AdminPanel from "./components/AdminPanel";
-import Marketplace from "./components/Marketplace";
+const AdminPanel = lazy(() => import("./components/AdminPanel"));
+const Marketplace = lazy(() => import("./components/Marketplace"));
 import FounderCard from "./components/FounderCard";
 import CheckoutModal from "./components/CheckoutModal";
-import UserDashboard from "./components/UserDashboard";
+const UserDashboard = lazy(() => import("./components/UserDashboard"));
 import InsurancePolicy from "./components/InsurancePolicy";
 import AboutUs from "./components/AboutUs";
 import Contact from "./components/Contact";
@@ -186,9 +186,12 @@ export default function App() {
       // Create session in background
       await fetch('/api/chat/sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}`
+        },
         body: JSON.stringify({
-          participants: [user._id, sellerId],
+          sellerId,
           listingId
         })
       });
@@ -293,34 +296,40 @@ export default function App() {
           </>
         )}
 
-        {activeSection === 'items' && (
-          <Marketplace 
-            listings={listings} 
-            searchFilters={searchFilters} 
-            onProductSelect={handleProductSelect}
-            onOpenChat={handleOpenChat}
-          />
-        )}
+        <Suspense fallback={
+          <div className="min-h-screen flex items-center justify-center">
+            <div className="w-12 h-12 border-4 border-brand-accent border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }>
+          {activeSection === 'items' && (
+            <Marketplace 
+              listings={listings} 
+              searchFilters={searchFilters} 
+              onProductSelect={handleProductSelect}
+              onOpenChat={handleOpenChat}
+            />
+          )}
 
-        {activeSection === 'insurance' && (
-          <InsurancePolicy />
-        )}
+          {activeSection === 'insurance' && (
+            <InsurancePolicy />
+          )}
 
-        {activeSection === 'about' && (
-          <AboutUs />
-        )}
+          {activeSection === 'about' && (
+            <AboutUs />
+          )}
 
-        {activeSection === 'contact' && (
-          <Contact />
-        )}
+          {activeSection === 'contact' && (
+            <Contact />
+          )}
 
-        {activeSection === 'privacy' && (
-          <PrivacyPolicy />
-        )}
+          {activeSection === 'privacy' && (
+            <PrivacyPolicy />
+          )}
 
-        {activeSection === 'delivery' && (
-          <DeliveryPolicy />
-        )}
+          {activeSection === 'delivery' && (
+            <DeliveryPolicy />
+          )}
+        </Suspense>
       </main>
 
       <Footer onNavigate={handleNavigate} />
@@ -338,27 +347,29 @@ export default function App() {
         onAdd={handleAddListing}
       />
 
-      <AdminPanel 
-        isOpen={isAdminPanelOpen} 
-        onClose={() => setIsAdminPanelOpen(false)} 
-        listings={listings}
-        onDelete={handleDeleteListing}
-      />
+      <Suspense fallback={null}>
+        <AdminPanel 
+          isOpen={isAdminPanelOpen} 
+          onClose={() => setIsAdminPanelOpen(false)} 
+          listings={listings}
+          onDelete={handleDeleteListing}
+        />
 
-      <UserDashboard 
-        isOpen={isDashboardOpen} 
-        onClose={() => setIsDashboardOpen(false)} 
-        listings={listings}
-        onOpenSell={() => {
-          if (!isSignedIn) {
-            setIsAuthModalOpen(true);
-            return;
-          }
-          setIsDashboardOpen(false);
-          setIsSellModalOpen(true);
-        }}
-        initialTab={dashboardTab}
-      />
+        <UserDashboard 
+          isOpen={isDashboardOpen} 
+          onClose={() => setIsDashboardOpen(false)} 
+          listings={listings}
+          onOpenSell={() => {
+            if (!isSignedIn) {
+              setIsAuthModalOpen(true);
+              return;
+            }
+            setIsDashboardOpen(false);
+            setIsSellModalOpen(true);
+          }}
+          initialTab={dashboardTab}
+        />
+      </Suspense>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
       

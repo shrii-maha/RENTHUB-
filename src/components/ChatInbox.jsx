@@ -19,7 +19,9 @@ export default function ChatInbox({ variant = 'default' }) {
   useEffect(() => {
     if (!chatUserId) return;
     
-    fetch(`/api/chat/sessions/user/${chatUserId}`)
+    fetch(`/api/chat/sessions/user/${chatUserId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
+    })
       .then(res => res.json())
       .then(data => {
         setSessions(data);

@@ -8,11 +8,13 @@ const OrderSchema = new mongoose.Schema({
   },
   buyerId: {
     type: String, // email
-    required: true
+    required: true,
+    index: true
   },
   sellerId: {
     type: String, // email
-    required: true
+    required: true,
+    index: true
   },
   amount: {
     type: Number,
@@ -21,7 +23,8 @@ const OrderSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['escrow', 'shipped', 'delivered', 'released', 'payout_requested', 'paid', 'disputed'],
-    default: 'escrow'
+    default: 'escrow',
+    index: true
   },
   paymentIntentId: {
     type: String,

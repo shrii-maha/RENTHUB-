@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const ListingSchema = new mongoose.Schema({
   title: { type: String, required: true },
-  category: { type: String, required: true },
+  category: { type: String, required: true, index: true },
   price: { type: String, required: true },
   location: { type: String, required: true },
   condition: { type: String, default: 'New' },
@@ -12,8 +12,8 @@ const ListingSchema = new mongoose.Schema({
   rating: { type: Number, default: 5.0 },
   image: { type: String },
   images: { type: [String], default: [] },
-  sellerId: { type: String, required: true },
-  status: { type: String, enum: ['pending', 'approved', 'rejected', 'sold', 'rented'], default: 'pending' },
+  sellerId: { type: String, required: true, index: true },
+  status: { type: String, enum: ['pending', 'approved', 'rejected', 'sold', 'rented'], default: 'pending', index: true },
   lat: { type: Number },
   lng: { type: Number }
 }, { timestamps: true });

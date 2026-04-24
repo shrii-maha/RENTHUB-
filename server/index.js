@@ -19,6 +19,9 @@ import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import { Strategy as GitHubStrategy } from 'passport-github2';
 import { GoogleGenAI } from "@google/genai";
+import helmet from 'helmet';
+import { rateLimit } from 'express-rate-limit';
+import { body, validationResult } from 'express-validator';
 
 // Models
 import Listing from './models/Listing.js';
@@ -46,16 +49,35 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
 
+// Rate Limiting
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // limit each IP to 10 requests per windowMs
+  message: { error: 'Too many requests, please try again later.' }
+});
+
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 50,
+  message: { error: 'Daily AI limit reached. Please try again tomorrow.' }
+});
+
 // Auth Middleware
 const verifyToken = (req, res, next) => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error('❌ CRITICAL ERROR: JWT_SECRET is not defined in .env');
+    return res.status(500).json({ error: 'Server configuration error.' });
+  }
   const token = req.headers['authorization']?.split(' ')[1];
   if (!token) return res.status(401).json({ error: 'Access denied. No token provided.' });
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+    const decoded = jwt.verify(token, secret);
     req.user = decoded;
     next();
   } catch (err) { res.status(400).json({ error: 'Invalid token.' }); }
@@ -141,34 +163,74 @@ const getCoordinates = async (location) => {
 // --- API ROUTES ---
 
 // Auth
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    const { fullName, email, password } = req.body;
-    let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ error: 'User already exists' });
-    const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ fullName, email, password: hashedPassword });
-    await user.save();
-    const token = generateJWT(user);
-    res.status(201).json({ token, user: { _id: user._id, email: user.email, fullName: user.fullName, role: user.role } });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+app.post('/api/auth/register', 
+  authLimiter,
+  body('email').isEmail().withMessage('Invalid email format'),
+  body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('fullName').notEmpty().withMessage('Full name is required'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+    try {
+      const { fullName, email, password } = req.body;
+      let user = await User.findOne({ email });
+      if (user) return res.status(400).json({ error: 'User already exists' });
+      const hashedPassword = await bcrypt.hash(password, 10);
+      user = new User({ fullName, email, password: hashedPassword });
+      await user.save();
+      const token = generateJWT(user);
+      res.status(201).json({ token, user: { _id: user._id, email: user.email, fullName: user.fullName, role: user.role } });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
-    const token = generateJWT(user);
-    res.json({ token, user: { _id: user._id, email: user.email, fullName: user.fullName, role: user.role } });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+app.post('/api/auth/login', 
+  authLimiter,
+  body('email').isEmail().withMessage('Invalid email format'),
+  body('password').notEmpty().withMessage('Password is required'),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+    try {
+      const { email, password } = req.body;
+      const user = await User.findOne({ email });
+      if (!user) return res.status(400).json({ error: 'Invalid credentials' });
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+      const token = generateJWT(user);
+      res.json({ token, user: { _id: user._id, email: user.email, fullName: user.fullName, role: user.role } });
+    } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user._id).select('-password');
+    res.json(user);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/auth/profile', verifyToken, async (req, res) => {
+  try {
+    const { fullName, phone, bio, address } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { fullName, phone, bio, address },
+      { new: true }
+    ).select('-password');
+    res.json(user);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/auth/avatar', verifyToken, async (req, res) => {
+  // This would typically use multer + cloudinary, for now we accept a URL
+  try {
+    const { avatar } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar },
+      { new: true }
+    ).select('-password');
     res.json(user);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -217,14 +279,32 @@ app.patch('/api/notifications/:id/read', verifyToken, async (req, res) => {
 
 // Orders
 app.post('/api/orders', verifyToken, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const order = new Order(req.body);
-    await order.save();
-    const listing = await Listing.findById(order.listingId);
-    if (listing) { listing.status = listing.type === 'Sale' ? 'sold' : 'rented'; await listing.save(); }
-    await Notification.create({ userId: order.sellerId, type: 'order_placed', message: `New order for "${listing?.title}". ₹${order.amount.toLocaleString()} in escrow.` });
+    await order.save({ session });
+
+    const listing = await Listing.findById(order.listingId).session(session);
+    if (!listing) throw new Error('Listing not found');
+    
+    listing.status = listing.type === 'Sale' ? 'sold' : 'rented';
+    await listing.save({ session });
+
+    await Notification.create([{ 
+      userId: order.sellerId, 
+      type: 'order_placed', 
+      message: `New order for "${listing.title}". ₹${order.amount.toLocaleString()} in escrow.` 
+    }], { session });
+
+    await session.commitTransaction();
     res.status(201).json(order);
-  } catch (err) { res.status(400).json({ error: err.message }); }
+  } catch (err) { 
+    await session.abortTransaction();
+    res.status(400).json({ error: err.message }); 
+  } finally {
+    session.endSession();
+  }
 });
 
 app.patch('/api/orders/:id/ship', verifyToken, async (req, res) => {
@@ -323,7 +403,7 @@ app.post('/api/chat/messages', verifyToken, async (req, res) => {
 });
 
 // AI Chat
-app.post('/api/chat', async (req, res) => {
+app.post('/api/chat', aiLimiter, async (req, res) => {
   if (!genAI) return res.status(500).json({ error: 'AI not configured' });
   try {
     const { message } = req.body;

@@ -23,7 +23,9 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
     }
 
     // Fetch message history
-    fetch(`/api/chat/messages/${sessionId}`)
+    fetch(`/api/chat/messages/${sessionId}`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
+    })
       .then(res => res.json())
       .then(data => {
         setMessages(data);
@@ -31,7 +33,10 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
         // Mark as read
         fetch(`/api/chat/messages/${sessionId}/read`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('rh_token')}`
+          },
           body: JSON.stringify({ userId: chatUserId })
         });
       })

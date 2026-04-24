@@ -74,6 +74,37 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   }, [initialTab]);
 
 
+  // Calculate Chart Data (last 30 days of earnings)
+  const chartData = React.useMemo(() => {
+    const data = [];
+    const now = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      
+      const dailyOrders = orders.filter(o => {
+        if (!o.createdAt) return false;
+        return new Date(o.createdAt).toISOString().split('T')[0] === dateStr && o.status !== 'refunded';
+      });
+      
+      const total = dailyOrders.reduce((sum, order) => {
+        const listing = order.listingId;
+        const type = listing?.type || "Sale";
+        const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
+        const feePercent = type === 'Sale' ? 5 : 15;
+        const platformFee = Math.floor(basePrice * (feePercent / 100));
+        return sum + (basePrice - platformFee);
+      }, 0);
+
+      data.push({
+        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        earnings: total
+      });
+    }
+    return data;
+  }, [orders]);
+
   if (!user || isAdmin) return null;
 
   // Remove redundant filter: const userListings = listings.filter(l => l.sellerId === user.id);
@@ -117,37 +148,6 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   };
 
   const rawEarnings = availableBalance + pendingEarnings + processingBalance + lifetimePaid;
-
-  // Calculate Chart Data (last 30 days of earnings)
-  const chartData = React.useMemo(() => {
-    const data = [];
-    const now = new Date();
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().split('T')[0];
-      
-      const dailyOrders = orders.filter(o => {
-        if (!o.createdAt) return false;
-        return new Date(o.createdAt).toISOString().split('T')[0] === dateStr && o.status !== 'refunded';
-      });
-      
-      const total = dailyOrders.reduce((sum, order) => {
-        const listing = order.listingId;
-        const type = listing?.type || "Sale";
-        const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
-        const feePercent = type === 'Sale' ? 5 : 15;
-        const platformFee = Math.floor(basePrice * (feePercent / 100));
-        return sum + (basePrice - platformFee);
-      }, 0);
-
-      data.push({
-        date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        earnings: total
-      });
-    }
-    return data;
-  }, [orders]);
 
   const handleTabChange = (tab: Tab) => {
     setActiveTab(tab);
