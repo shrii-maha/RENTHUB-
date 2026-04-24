@@ -35,7 +35,7 @@ RentHub includes a persistent, real-time messaging system allowing buyers and se
 
 - **Initialization:** When a user clicks "Message Seller" on a listing, a `ChatSession` is created linking the two users and the specific listing context.
 - **Floating Chat:** The chat interface exists as a persistent, floating widget (`FloatingChat.jsx`) accessible from anywhere on the site.
-- **Real-Time Delivery:** Messages are routed instantly through the Socket.io Node server (`server/index.ts`). Unread message counts are tracked and updated automatically.
+- **Real-Time Delivery:** Messages are routed instantly through the Socket.io Node server (`server/index.js`). Unread message counts are tracked and updated automatically.
 
 ## 5. In-App Notifications
 RentHub features a real-time notification engine to keep users informed about their marketplace activities.
@@ -55,3 +55,19 @@ To empower sellers, RentHub provides visual data insights directly in the User D
 - **Role-Based Access:** The platform differentiates between standard `user` and `admin` roles. 
 - **Admin Email:** The admin user is defined by the `VITE_ADMIN_EMAIL` environment variable. Logging in with this email grants access to the Admin Panel (Approvals, User Directory, Payout Ledger, Site Analytics).
 - **Protected Routes:** Backend modifications (creating listings, modifying orders, updating profiles) require a valid `Bearer` token validated by the `verifyToken` middleware.
+
+## 8. Interactive Maps & Geocoding
+RentHub integrates an interactive mapping system to help users browse listings by proximity.
+- **Auto-Geocoding:** When a seller provides a location string (e.g., "Mumbai"), the backend server uses the **Nominatim (OpenStreetMap)** API to convert it into precise latitude and longitude coordinates.
+- **Map View:** The Marketplace page features a view toggle. In "Map" mode, the platform renders an interactive map using `react-leaflet`.
+- **Contextual Popups:** Each map marker contains a preview of the listing, allowing users to see the price and image without leaving the map view.
+
+## 9. Technology Architecture (Pure JS MERN Stack)
+Per architectural design requirements, the platform is built using a **Pure JavaScript** stack for maximum simplicity and maintainability.
+- **Frontend:** React.js (Vite), Tailwind CSS, Framer Motion.
+- **Backend:** Node.js, Express.js.
+- **Database:** MongoDB Atlas (Mongoose).
+- **Security:** JWT (JSON Web Tokens), bcrypt.js, Passport.js.
+- **Storage:** Cloudinary (Images).
+- **Communication:** Socket.io (Real-time Chat).
+- **Maps:** Leaflet & React-Leaflet.
