@@ -7,7 +7,9 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem('rh_token'));
   const [loading, setLoading] = useState(true);
 
-  // Restore session from stored JWT on mount (set by ClerkBridge after Clerk sign-in)
+  // ---------------------------------------------------------
+  // Restore custom JWT session on mount
+  // ---------------------------------------------------------
   useEffect(() => {
     const storedToken = localStorage.getItem('rh_token');
     if (storedToken) {
@@ -30,36 +32,37 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Called by ClerkBridge when Clerk signs in — syncs Clerk user to MongoDB, gets JWT
-  const syncClerkUser = useCallback(async (clerkUserData) => {
-    if (!clerkUserData) return;
-    const primaryEmail = clerkUserData.primaryEmailAddress?.emailAddress;
-    if (!primaryEmail) return;
-
-    try {
-      const res = await fetch('/api/auth/clerk-sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clerkId: clerkUserData.id,
-          email: primaryEmail,
-          fullName: clerkUserData.fullName || clerkUserData.firstName || primaryEmail.split('@')[0],
-          avatar: clerkUserData.imageUrl || '',
-        })
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.token) {
-        localStorage.setItem('rh_token', data.token);
-        setToken(data.token);
-        setDbUser(data.user);
-      }
-    } catch (err) {
-      console.error('Clerk sync failed:', err);
-    }
+  // ---------------------------------------------------------
+  // Custom JWT methods
+  // ---------------------------------------------------------
+  const login = useCallback(async (email, password) => {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    localStorage.setItem('rh_token', data.token);
+    setToken(data.token);
+    setDbUser(data.user);
+    return data.user;
   }, []);
 
-  // Called by ClerkBridge when Clerk signs out
+  const register = useCallback(async (fullName, email, password) => {
+    const res = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName, email, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    localStorage.setItem('rh_token', data.token);
+    setToken(data.token);
+    setDbUser(data.user);
+    return data.user;
+  }, []);
+
   const logout = useCallback(async () => {
     localStorage.removeItem('rh_token');
     setToken(null);
@@ -100,8 +103,9 @@ export function AuthProvider({ children }) {
       loading,
       isSignedIn: !!dbUser,
       isAdmin: dbUser?.role === 'admin',
+      login,
+      register,
       logout,
-      syncClerkUser,
       updateProfile,
       updateAvatar,
     }}>

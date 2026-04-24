@@ -19,6 +19,7 @@ import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
 import FloatingChat from "./components/FloatingChat";
 import AuthModal from "./components/AuthModal";
+import ResetPasswordModal from "./components/ResetPasswordModal";
 import { motion, useScroll, useSpring } from "motion/react";
 import { useAuth } from "./contexts/AuthContext";
 
@@ -49,6 +50,8 @@ export default function App() {
   const [isFloatingChatOpen, setIsFloatingChatOpen] = useState(false);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetToken, setResetToken] = useState(null);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dashboardTab, setDashboardTab] = useState('dashboard');
   const [listings, setListings] = useState([]);
@@ -62,6 +65,27 @@ export default function App() {
     damping: 30,
     restDelta: 0.001
   });
+
+  // Handle OAuth callback tokens and Password Reset links
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const reset_token = params.get('reset_token');
+    
+    if (token) {
+      localStorage.setItem('rh_token', token);
+      // Clean up URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+      window.location.reload(); // Quick way to let AuthContext pick it up
+    }
+    
+    if (reset_token) {
+      setResetToken(reset_token);
+      setIsResetModalOpen(true);
+      // Clean up URL without refreshing
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   // Fetch listings from API on mount
   useEffect(() => {
@@ -338,6 +362,15 @@ export default function App() {
       />
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      
+      <ResetPasswordModal 
+        isOpen={isResetModalOpen} 
+        onClose={() => {
+          setIsResetModalOpen(false);
+          setResetToken(null);
+        }} 
+        resetToken={resetToken} 
+      />
 
       <FloatingChat 
         isOpen={isFloatingChatOpen} 
