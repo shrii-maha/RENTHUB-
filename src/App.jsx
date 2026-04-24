@@ -17,7 +17,6 @@ import Contact from "./components/Contact";
 import PrivacyPolicy from "./components/PrivacyPolicy";
 import DeliveryPolicy from "./components/DeliveryPolicy";
 import ChatBot from "./components/ChatBot";
-import FloatingChat from "./components/FloatingChat";
 import AuthModal from "./components/AuthModal";
 import ResetPasswordModal from "./components/ResetPasswordModal";
 import { motion, useScroll, useSpring } from "motion/react";
@@ -370,11 +369,6 @@ export default function App() {
           setResetToken(null);
         }} 
         resetToken={resetToken} 
-      />
-
-      <FloatingChat 
-        isOpen={isFloatingChatOpen} 
-        onOpenToggle={setIsFloatingChatOpen} 
       />
 
       <ChatBot />
