@@ -52,9 +52,16 @@ export default function AuthModal({ isOpen, onClose }) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || 'Failed to send reset email');
-        setSuccess('Reset link sent! Please check your email.');
+        
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Failed to send reset email');
+          setSuccess('Reset link sent! Please check your email.');
+        } else {
+          if (!res.ok) throw new Error(`Server error (${res.status}). Please ensure the backend is running.`);
+          throw new Error('Unexpected response from server.');
+        }
       }
     } catch (err) {
       setError(err.message);

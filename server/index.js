@@ -41,6 +41,15 @@ const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenAI({ apiKey: proce
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Nodemailer Config
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -177,8 +186,34 @@ app.post('/api/auth/register',
       let user = await User.findOne({ email });
       if (user) return res.status(400).json({ error: 'User already exists' });
       const hashedPassword = await bcrypt.hash(password, 10);
-      user = new User({ fullName, email, password: hashedPassword });
+      
+      const verificationToken = crypto.randomBytes(32).toString('hex');
+      
+      user = new User({ 
+        fullName, 
+        email, 
+        password: hashedPassword,
+        verificationToken,
+        isVerified: false 
+      });
       await user.save();
+
+      const verifyUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?verify_token=${verificationToken}`;
+      
+      await transporter.sendMail({
+        from: `"RentHub Marketplace" <${process.env.EMAIL_USER}>`,
+        to: user.email,
+        subject: "Verify Your RentHub Account",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+            <h2 style="color: #000;">Welcome to RentHub!</h2>
+            <p>Please click the button below to verify your email address and activate your account.</p>
+            <a href="${verifyUrl}" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">Verify Account</a>
+            <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
+          </div>
+        `
+      });
+
       const token = generateJWT(user);
       res.status(201).json({ token, user: { _id: user._id, email: user.email, fullName: user.fullName, role: user.role } });
     } catch (err) { res.status(500).json({ error: err.message }); }
@@ -196,11 +231,77 @@ app.post('/api/auth/login',
       const { email, password } = req.body;
       const user = await User.findOne({ email });
       if (!user) return res.status(400).json({ error: 'Invalid credentials' });
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(400).json({ error: 'Invalid credentials' });
+      if (user.password && !(await bcrypt.compare(password, user.password))) {
+        return res.status(400).json({ error: 'Invalid credentials' });
+      }
       const token = generateJWT(user);
       res.json({ token, user: { _id: user._id, email: user.email, fullName: user.fullName, role: user.role } });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetToken = resetToken;
+    user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/?reset_token=${resetToken}`;
+    
+    await transporter.sendMail({
+      from: `"RentHub Marketplace" <${process.env.EMAIL_USER}>`,
+      to: user.email,
+      subject: "Password Reset Request",
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #000;">Password Reset Request</h2>
+          <p>You requested a password reset for your RentHub account.</p>
+          <p>Please click the button below to set a new password. This link will expire in 1 hour.</p>
+          <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0;">Reset Password</a>
+          <p style="color: #666; font-size: 12px;">If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Reset link sent to your email.' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/auth/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    const user = await User.findOne({ 
+      resetToken: token, 
+      resetTokenExpiry: { $gt: Date.now() } 
+    });
+
+    if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
+
+    user.password = await bcrypt.hash(password, 10);
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    await user.save();
+
+    res.json({ message: 'Password reset successfully' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/auth/verify/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const user = await User.findOne({ verificationToken: token });
+    if (!user) return res.status(400).json({ error: 'Invalid verification token' });
+
+    user.isVerified = true;
+    user.verificationToken = undefined;
+    await user.save();
+
+    res.json({ message: 'Account verified successfully! You can now use all features.' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 app.get('/api/auth/me', verifyToken, async (req, res) => {

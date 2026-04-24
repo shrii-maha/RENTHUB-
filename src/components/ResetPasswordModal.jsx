@@ -24,10 +24,16 @@ export default function ResetPasswordModal({ isOpen, onClose, resetToken }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: resetToken, password })
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
       
-      setSuccess('Password reset successfully. You can now log in.');
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+        setSuccess('Password reset successfully. You can now log in.');
+      } else {
+        if (!res.ok) throw new Error(`Server error (${res.status}). Please ensure the backend is running.`);
+        throw new Error('Unexpected response from server.');
+      }
       setTimeout(() => {
         onClose();
       }, 3000);

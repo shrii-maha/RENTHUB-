@@ -70,19 +70,32 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('token');
     const reset_token = params.get('reset_token');
+    const verify_token = params.get('verify_token');
     
     if (token) {
       localStorage.setItem('rh_token', token);
-      // Clean up URL without refreshing
       window.history.replaceState({}, document.title, window.location.pathname);
-      window.location.reload(); // Quick way to let AuthContext pick it up
+      window.location.reload();
     }
     
     if (reset_token) {
       setResetToken(reset_token);
       setIsResetModalOpen(true);
-      // Clean up URL without refreshing
       window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    if (verify_token) {
+      fetch(`/api/auth/verify/${verify_token}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.message) {
+            alert(data.message);
+          } else if (data.error) {
+            alert(data.error);
+          }
+          window.history.replaceState({}, document.title, window.location.pathname);
+        })
+        .catch(err => console.error('Verification failed:', err));
     }
   }, []);
 
