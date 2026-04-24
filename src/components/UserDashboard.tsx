@@ -24,7 +24,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
 
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
   const userEmail = user?.email;
-  const isAdmin = userEmail === import.meta.env.VITE_ADMIN_EMAIL || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || userEmail === import.meta.env.VITE_ADMIN_EMAIL;
 
   const [orders, setOrders] = useState<any[]>([]);
   const [buyerOrders, setBuyerOrders] = useState<any[]>([]);
@@ -35,37 +35,35 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   const [selectedOrderForReview, setSelectedOrderForReview] = useState<any>(null);
 
   useEffect(() => {
-    if (isOpen && userEmail && !isAdmin) {
+    if (isOpen && user?._id) {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` };
+      
       // Fetch Seller Orders using our MongoDB user ID
-      if (user?._id) {
-        fetch(`/api/orders/seller/${user._id}`)
-          .then(res => res.json())
-          .then(data => setOrders(Array.isArray(data) ? data : []))
-          .catch(console.error);
-      }
+      fetch(`/api/orders/seller/${user._id}`, { headers })
+        .then(res => res.json())
+        .then(data => setOrders(Array.isArray(data) ? data : []))
+        .catch(console.error);
 
-      // Fetch Buyer Orders by email
-      fetch(`/api/orders/buyer/${userEmail}`)
+      // Fetch Buyer Orders by ID
+      fetch(`/api/orders/buyer/${user._id}`, { headers })
         .then(res => res.json())
         .then(data => setBuyerOrders(Array.isArray(data) ? data : []))
         .catch(console.error);
 
       // Fetch Seller's own listings (including sold/rented)
-      if (user?._id) {
-        fetch(`/api/listings/seller/${user._id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (Array.isArray(data)) {
-              setUserListings(data.map((item: any) => ({
-                ...item,
-                id: item._id || item.id
-              })));
-            }
-          })
-          .catch(console.error);
-      }
+      fetch(`/api/listings/seller/${user._id}`, { headers })
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setUserListings(data.map((item: any) => ({
+              ...item,
+              id: item._id || item.id
+            })));
+          }
+        })
+        .catch(console.error);
     }
-  }, [isOpen, userEmail, isAdmin, user?._id]);
+  }, [isOpen, isAdmin, user?._id]);
 
   useEffect(() => {
     if (initialTab) {
@@ -105,7 +103,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
     return data;
   }, [orders]);
 
-  if (!user || isAdmin) return null;
+  if (!user) return null;
 
   // Remove redundant filter: const userListings = listings.filter(l => l.sellerId === user.id);
   const activeRentals = userListings.filter(l => l.status === 'rented').length;
@@ -137,7 +135,10 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
     if (availableBalance <= 0) return;
     setRequestingPayout(true);
     try {
-      const res = await fetch(`/api/payouts/request/${userEmail}`, { method: 'POST' });
+      const res = await fetch(`/api/payouts/request/${user?._id}`, { 
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
+      });
       if (res.ok) {
         // Optimistically update orders or refetch
         setOrders(prev => prev.map(o => o.status === 'released' ? { ...o, status: 'payout_requested' } : o));
@@ -739,7 +740,10 @@ function ShipOrderPanel({ orderId, onShipped }: { orderId: string; onShipped: ()
     try {
       const res = await fetch(`/api/orders/${orderId}/ship`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('rh_token')}`
+        },
         body: JSON.stringify({ trackingNumber, shippingNote: note, deliveryMethod: 'shipping' })
       });
       if (res.ok) { onShipped(); setOpen(false); }
@@ -775,7 +779,10 @@ function ConfirmDeliveryButton({ orderId, onConfirmed }: { orderId: string; onCo
     if (!window.confirm('Confirm you have received the item? This will release the payment to the seller.')) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/orders/${orderId}/confirm-delivery`, { method: 'PATCH' });
+      const res = await fetch(`/api/orders/${orderId}/confirm-delivery`, { 
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
+      });
       if (res.ok) { onConfirmed(); }
     } finally { setLoading(false); }
   };

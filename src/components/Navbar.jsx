@@ -17,8 +17,8 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('rh_token');
-      if (!token) return;
-      const res = await fetch(`/api/notifications/${user.email}`, {
+      if (!token || !user?._id) return;
+      const res = await fetch(`/api/notifications/${user._id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {

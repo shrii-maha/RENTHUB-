@@ -238,7 +238,7 @@ app.post('/api/auth/avatar', verifyToken, async (req, res) => {
 // Listings
 app.post('/api/listings', verifyToken, async (req, res) => {
   try {
-    const listingData = { ...req.body, status: 'pending', sellerId: req.user.email };
+    const listingData = { ...req.body, status: 'pending', sellerId: req.user._id };
     const coords = await getCoordinates(req.body.location);
     if (coords) { listingData.lat = coords.lat; listingData.lng = coords.lng; }
     const listing = new Listing(listingData);
@@ -263,9 +263,9 @@ app.get('/api/listings/seller/:id', verifyToken, async (req, res) => {
 });
 
 // Notifications
-app.get('/api/notifications/:email', verifyToken, async (req, res) => {
+app.get('/api/notifications/:id', verifyToken, async (req, res) => {
   try {
-    const notifications = await Notification.find({ userId: req.params.email }).sort({ createdAt: -1 }).limit(30);
+    const notifications = await Notification.find({ userId: req.params.id }).sort({ createdAt: -1 }).limit(30);
     res.json(notifications);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -323,16 +323,16 @@ app.patch('/api/orders/:id/confirm-delivery', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
-app.get('/api/orders/seller/:email', verifyToken, async (req, res) => {
+app.get('/api/orders/seller/:id', verifyToken, async (req, res) => {
   try {
-    const orders = await Order.find({ sellerId: req.params.email }).populate('listingId').sort({ createdAt: -1 });
+    const orders = await Order.find({ sellerId: req.params.id }).populate('listingId').sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/orders/buyer/:email', verifyToken, async (req, res) => {
+app.get('/api/orders/buyer/:id', verifyToken, async (req, res) => {
   try {
-    const orders = await Order.find({ buyerId: req.params.email }).populate('listingId').sort({ createdAt: -1 });
+    const orders = await Order.find({ buyerId: req.params.id }).populate('listingId').sort({ createdAt: -1 });
     res.json(orders);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -357,6 +357,14 @@ app.get('/api/admin/pending', verifyToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/admin/listings', verifyToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
+  try {
+    const listings = await Listing.find({}).sort({ createdAt: -1 });
+    res.json(listings);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.patch('/api/admin/listings/:id/status', verifyToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
   try {
@@ -373,15 +381,15 @@ app.patch('/api/admin/listings/:id/status', verifyToken, async (req, res) => {
 app.post('/api/chat/sessions', verifyToken, async (req, res) => {
   try {
     const { sellerId, listingId } = req.body;
-    let session = await ChatSession.findOne({ participants: { $all: [req.user.email, sellerId] }, listingId });
-    if (!session) { session = new ChatSession({ participants: [req.user.email, sellerId], listingId }); await session.save(); }
+    let session = await ChatSession.findOne({ participants: { $all: [req.user._id, sellerId] }, listingId });
+    if (!session) { session = new ChatSession({ participants: [req.user._id, sellerId], listingId }); await session.save(); }
     res.json(session);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/chat/sessions/:email', verifyToken, async (req, res) => {
+app.get('/api/chat/sessions/:id', verifyToken, async (req, res) => {
   try {
-    const sessions = await ChatSession.find({ participants: req.params.email }).sort({ updatedAt: -1 });
+    const sessions = await ChatSession.find({ participants: req.params.id }).sort({ updatedAt: -1 });
     res.json(sessions);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -395,7 +403,7 @@ app.get('/api/chat/messages/:sessionId', verifyToken, async (req, res) => {
 
 app.post('/api/chat/messages', verifyToken, async (req, res) => {
   try {
-    const message = new ChatMessage({ ...req.body, senderId: req.user.email });
+    const message = new ChatMessage({ ...req.body, senderId: req.user._id });
     await message.save();
     await ChatSession.findByIdAndUpdate(req.body.sessionId, { lastMessage: req.body.text, lastMessageAt: Date.now() });
     res.status(201).json(message);

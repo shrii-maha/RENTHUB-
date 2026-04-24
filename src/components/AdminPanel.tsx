@@ -38,13 +38,14 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
 
   const fetchAdminData = async () => {
     try {
+      const headers = { 'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}` };
       const [statsRes, pendingRes, activityRes, usersRes, payoutsRes, listingsRes] = await Promise.all([
-        fetch('/api/admin/stats'),
-        fetch('/api/admin/pending'),
-        fetch('/api/admin/activity'),
-        fetch('/api/admin/users'),
-        fetch('/api/admin/payouts'),
-        fetch('/api/admin/listings')
+        fetch('/api/admin/stats', { headers }),
+        fetch('/api/admin/pending', { headers }),
+        fetch('/api/admin/activity', { headers }),
+        fetch('/api/admin/users', { headers }),
+        fetch('/api/admin/payouts', { headers }),
+        fetch('/api/admin/listings', { headers })
       ]);
       setStats(await statsRes.json());
       setPending(await pendingRes.json());
@@ -63,7 +64,10 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     try {
       const res = await fetch(`/api/admin/listings/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}`
+        },
         body: JSON.stringify({ status })
       });
       if (res.ok) {
@@ -77,7 +81,8 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const releasePayout = async (id: string) => {
     try {
       const res = await fetch(`/api/admin/orders/${id}/release`, {
-        method: 'PATCH'
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}` }
       });
       if (res.ok) {
         setPayouts(prev => prev.map(p => p._id === id ? { ...p, status: 'released' } : p));
@@ -91,7 +96,8 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const disbursePayout = async (sellerId: string) => {
     try {
       const res = await fetch(`/api/admin/payouts/disburse/${sellerId}`, {
-        method: 'PATCH'
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}` }
       });
       if (res.ok) {
         setPayouts(prev => prev.map(p => p.sellerId === sellerId && p.status === 'payout_requested' ? { ...p, status: 'paid' } : p));
@@ -105,7 +111,8 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const releaseAllPayouts = async () => {
     try {
       const res = await fetch(`/api/admin/orders/release-all`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}` }
       });
       if (res.ok) {
         setPayouts([]);
@@ -120,7 +127,10 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const deleteListing = async (id: string) => {
     if (!confirm("Are you sure you want to PERMANENTLY delete this listing? This cannot be undone.")) return;
     try {
-      const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/listings/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}` }
+      });
       if (res.ok) {
         setAllListings(prev => prev.filter(l => l._id !== id));
         fetchAdminData();
@@ -134,7 +144,10 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
     try {
       const res = await fetch(`/api/listings/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || localStorage.getItem('rh_token')}`
+        },
         body: JSON.stringify(updatedData)
       });
       if (res.ok) {
