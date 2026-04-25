@@ -2,121 +2,126 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 
 const AuthContext = createContext(null);
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AuthProvider — manages the global authentication state for the entire app.
+// Uses a JWT stored in localStorage. On mount it verifies the token with the
+// backend so that the session is restored across page reloads.
+// ─────────────────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
-  const [dbUser, setDbUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('rh_token'));
+  const [dbUser, setDbUser]   = useState(null);
+  const [token,  setToken]    = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ---------------------------------------------------------
-  // Restore custom JWT session on mount
-  // ---------------------------------------------------------
+  // ── Restore session on first render ───────────────────────────────────────
   useEffect(() => {
-    const storedToken = localStorage.getItem('rh_token');
-    if (storedToken) {
-      fetch('/api/auth/me', {
-        headers: { Authorization: `Bearer ${storedToken}` }
-      })
-        .then(res => {
-          if (!res.ok) {
-            return res.json().then(errData => {
-              throw new Error(`Status ${res.status}: ${errData.error || 'Unknown backend error'}`);
-            }).catch(() => {
-              throw new Error(`Status ${res.status}: Invalid JSON from server (might be Vercel/Render timeout)`);
-            });
-          }
-          return res.json();
-        })
-        .then(userData => {
-          console.log('✅ Session restored for:', userData.email);
-          setDbUser(userData);
-          setToken(storedToken);
-          // Temporary success alert for debugging
-          alert("SUCCESS! You are logged in as " + userData.email);
-        })
-        .catch((err) => {
-          console.error('❌ Session restoration failed.', err);
-          alert("Login failed! The server rejected your token. Error details: " + err.message);
-          localStorage.removeItem('rh_token');
-          setToken(null);
-          setDbUser(null);
-        })
-        .finally(() => setLoading(false));
-    } else {
+    const saved = localStorage.getItem('rh_token');
+    if (!saved) {
       setLoading(false);
+      return;
     }
+
+    fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${saved}` }
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          // Token invalid / expired → wipe it silently
+          localStorage.removeItem('rh_token');
+          return null;
+        }
+        return res.json();
+      })
+      .then((userData) => {
+        if (userData) {
+          setToken(saved);
+          setDbUser(userData);
+        }
+      })
+      .catch(() => {
+        // Network error — don't wipe the token, just leave the user logged out
+        // for this session. The token will be re-verified next time.
+        console.warn('⚠️ Could not reach the auth server. Working offline.');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  // ---------------------------------------------------------
-  // Custom JWT methods
-  // ---------------------------------------------------------
+  // ── Email + Password sign-in ───────────────────────────────────────────────
   const login = useCallback(async (email, password) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
+    const res  = await fetch('/api/auth/login', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      body:    JSON.stringify({ email, password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Login failed');
+
     localStorage.setItem('rh_token', data.token);
     setToken(data.token);
     setDbUser(data.user);
     return data.user;
   }, []);
 
+  // ── Registration ──────────────────────────────────────────────────────────
   const register = useCallback(async (fullName, email, password) => {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
+    const res  = await fetch('/api/auth/register', {
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName, email, password })
+      body:    JSON.stringify({ fullName, email, password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed');
+
     localStorage.setItem('rh_token', data.token);
     setToken(data.token);
     setDbUser(data.user);
     return data.user;
   }, []);
 
-  const logout = useCallback(async () => {
+  // ── Sign-out ──────────────────────────────────────────────────────────────
+  const logout = useCallback(() => {
     localStorage.removeItem('rh_token');
     setToken(null);
     setDbUser(null);
   }, []);
 
+  // ── Profile update ────────────────────────────────────────────────────────
   const updateProfile = useCallback(async (data) => {
+    const stored = localStorage.getItem('rh_token');
     const res = await fetch('/api/auth/profile', {
-      method: 'PUT',
+      method:  'PUT',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
+        Authorization:  `Bearer ${stored}`
       },
       body: JSON.stringify(data)
     });
-    const updatedUser = await res.json();
-    if (!res.ok) throw new Error(updatedUser.error || 'Update failed');
-    setDbUser(updatedUser);
-    return updatedUser;
-  }, [token]);
+    const updated = await res.json();
+    if (!res.ok) throw new Error(updated.error || 'Update failed');
+    setDbUser(updated);
+    return updated;
+  }, []);
 
+  // ── Avatar upload ─────────────────────────────────────────────────────────
   const updateAvatar = useCallback(async (formData) => {
+    const stored = localStorage.getItem('rh_token');
     const res = await fetch('/api/auth/avatar', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData
+      method:  'POST',
+      headers: { Authorization: `Bearer ${stored}` },
+      body:    formData
     });
-    const updatedUser = await res.json();
-    if (!res.ok) throw new Error(updatedUser.error || 'Avatar upload failed');
-    setDbUser(updatedUser);
-    return updatedUser;
-  }, [token]);
+    const updated = await res.json();
+    if (!res.ok) throw new Error(updated.error || 'Avatar upload failed');
+    setDbUser(updated);
+    return updated;
+  }, []);
 
   return (
     <AuthContext.Provider value={{
-      user: dbUser,
+      user:       dbUser,
       token,
       loading,
       isSignedIn: !!dbUser,
-      isAdmin: dbUser?.role === 'admin',
+      isAdmin:    dbUser?.role === 'admin',
       login,
       register,
       logout,

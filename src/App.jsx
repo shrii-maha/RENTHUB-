@@ -56,7 +56,7 @@ export default function App() {
   const [listings, setListings] = useState([]);
   const [searchFilters, setSearchFilters] = useState();
 
-  const { user, isSignedIn, token } = useAuth();
+  const { user, isSignedIn, token, refreshSession } = useAuth();
 
   const { scrollYProgress } = useScroll();
   const scaleX = useSpring(scrollYProgress, {
@@ -65,24 +65,38 @@ export default function App() {
     restDelta: 0.001
   });
 
-  // Handle OAuth callback tokens and Password Reset links
+  // ── Handle OAuth callback token + password-reset / email-verify links ──────
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    const reset_token = params.get('reset_token');
+    const params       = new URLSearchParams(window.location.search);
+    const oauthToken   = params.get('token');
+    const reset_token  = params.get('reset_token');
     const verify_token = params.get('verify_token');
-    
-    if (token) {
-      console.log('🎟️ OAuth Token Received, saving to local storage...');
-      localStorage.setItem('rh_token', token);
-      // Remove token from URL for security and to prevent loops
-      const url = new URL(window.location.href);
-      url.searchParams.delete('token');
-      window.history.replaceState({}, document.title, url.pathname);
-      // Force a re-fetch of the user data
-      window.location.reload();
+
+    if (oauthToken) {
+      // 1. Persist the token
+      localStorage.setItem('rh_token', oauthToken);
+      // 2. Clean the URL so the token isn't visible / bookmarked
+      const clean = new URL(window.location.href);
+      clean.searchParams.delete('token');
+      window.history.replaceState({}, document.title, clean.pathname);
+      // 3. Re-verify with the backend to hydrate the AuthContext
+      //    (no full page reload needed — the context handles state updates)
+      fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${oauthToken}` }
+      })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(userData => {
+          // Force a hard reload so React re-mounts with the fresh token in localStorage.
+          // This is the most reliable cross-browser approach for OAuth callbacks.
+          window.location.replace(clean.href);
+        })
+        .catch(err => {
+          console.error('OAuth session setup failed:', err);
+          localStorage.removeItem('rh_token');
+        });
+      return; // Don't process other params on this render
     }
-    
+
     if (reset_token) {
       setResetToken(reset_token);
       setIsResetModalOpen(true);
@@ -93,11 +107,8 @@ export default function App() {
       fetch(`/api/auth/verify/${verify_token}`)
         .then(res => res.json())
         .then(data => {
-          if (data.message) {
-            alert(data.message);
-          } else if (data.error) {
-            alert(data.error);
-          }
+          if (data.message) alert(data.message);
+          else if (data.error) alert(data.error);
           window.history.replaceState({}, document.title, window.location.pathname);
         })
         .catch(err => console.error('Verification failed:', err));
