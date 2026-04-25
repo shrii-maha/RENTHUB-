@@ -37,9 +37,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const dotenvResult = dotenv.config({ path: path.join(__dirname, '..', '.env') });
 if (dotenvResult.error) {
-  console.error('❌ CRITICAL: Failed to load .env file:', dotenvResult.error);
+  if (process.env.NODE_ENV === 'production') {
+    console.log('ℹ️ No .env file found; using environment variables from host dashboard.');
+  } else {
+    console.warn('⚠️ No .env file found. Local development may require it.');
+  }
 } else {
-  console.log('✅ .env loaded successfully from', path.join(__dirname, '..', '.env'));
+  console.log('✅ .env loaded successfully.');
 }
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
