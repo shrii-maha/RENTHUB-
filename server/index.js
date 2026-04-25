@@ -106,7 +106,7 @@ const verifyToken = (req, res, next) => {
 // JWT Generator
 const generateJWT = (user) => {
   return jwt.sign(
-    { _id: user._id, email: user.email, role: user.role, fullName: user.fullName, avatar: user.avatar },
+    { _id: user._id.toString(), email: user.email, role: user.role, fullName: user.fullName, avatar: user.avatar },
     process.env.JWT_SECRET || 'fallback_secret',
     { expiresIn: '7d' }
   );
