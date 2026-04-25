@@ -15,7 +15,8 @@ const ListingSchema = new mongoose.Schema({
   sellerId: { type: String, required: true, index: true },
   status: { type: String, enum: ['pending', 'approved', 'rejected', 'sold', 'rented'], default: 'pending', index: true },
   lat: { type: Number },
-  lng: { type: Number }
+  lng: { type: Number },
+  isPromoted: { type: Boolean, default: false }
 }, { timestamps: true });
 
 ListingSchema.pre('save', function() {

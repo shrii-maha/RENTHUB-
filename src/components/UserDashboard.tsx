@@ -6,6 +6,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Product } from "../types";
 import ReceiptModal from "./ReceiptModal";
 import ReviewModal from "./ReviewModal";
+import EditListingModal from "./EditListingModal";
 import ChatInbox from "./ChatInbox";
 
 interface UserDashboardProps {
@@ -33,6 +34,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   const [requestingPayout, setRequestingPayout] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedOrderForReview, setSelectedOrderForReview] = useState<any>(null);
+  const [editingListing, setEditingListing] = useState<any>(null);
 
   useEffect(() => {
     if (isOpen && user?._id) {
@@ -154,6 +156,49 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
     setActiveTab(tab);
   };
 
+  const handleUpdateListing = async (id: string, updatedData: any) => {
+    try {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('rh_token')}`
+        },
+        body: JSON.stringify(updatedData)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserListings(prev => prev.map(l => l.id === id || l._id === id ? { ...l, ...data } : l));
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteListing = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this listing?")) return;
+    try {
+      const res = await fetch(`/api/listings/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
+      });
+      if (res.ok) {
+        setUserListings(prev => prev.filter(l => l.id !== id && l._id !== id));
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handlePromoteListing = async (id: string) => {
+    try {
+      const res = await fetch(`/api/listings/${id}/promote`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUserListings(prev => prev.map(l => l.id === id || l._id === id ? { ...l, isPromoted: data.isPromoted } : l));
+      }
+    } catch (err) { console.error(err); }
+  };
+
 
   return (
     <AnimatePresence>
@@ -260,7 +305,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                   {activeTab === 'dashboard' && (
                     <motion.div key="dash" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                       <StatsRow listingsCount={userListings.filter(l => l.status === 'approved').length} rentalsCount={userListings.filter(l => l.status === 'rented').length} earnings={rawEarnings} />
-                      <ListingsGrid listings={userListings} />
+                      <ListingsGrid listings={userListings} onEdit={setEditingListing} onDelete={handleDeleteListing} onPromote={handlePromoteListing} />
                     </motion.div>
                   )}
 
@@ -331,7 +376,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
 
                   {activeTab === 'listings' && (
                     <motion.div key="listings" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
-                      <ListingsGrid listings={userListings} showFilters={true} />
+                      <ListingsGrid listings={userListings} showFilters={true} onEdit={setEditingListing} onDelete={handleDeleteListing} onPromote={handlePromoteListing} />
                     </motion.div>
                   )}
 
@@ -383,6 +428,15 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                 // Optionally update UI to show "Reviewed" status
                 setBuyerOrders(prev => prev.map(o => o._id === selectedOrderForReview._id ? { ...o, reviewed: true } : o));
               }}
+            />
+          )}
+
+          {editingListing && (
+            <EditListingModal 
+              isOpen={true} 
+              onClose={() => setEditingListing(null)} 
+              listing={editingListing} 
+              onUpdate={handleUpdateListing} 
             />
           )}
 
@@ -559,7 +613,13 @@ function TransactionHistory({ orders, setOrders }: { orders: any[], setOrders: R
   );
 }
 
-function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilters?: boolean }) {
+function ListingsGrid({ listings, showFilters, onEdit, onDelete, onPromote }: { 
+  listings: Product[], 
+  showFilters?: boolean,
+  onEdit: (listing: Product) => void,
+  onDelete: (id: string) => void,
+  onPromote: (id: string) => void
+}) {
   const [filter, setFilter] = useState<'All' | 'Active' | 'Rented'>('All');
   
   const filtered = listings.filter(item => {
@@ -617,13 +677,25 @@ function ListingsGrid({ listings, showFilters }: { listings: Product[], showFilt
                 </div>
               </div>
               <div className="flex gap-3">
-                <button className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-black transition-all" title="Promote">
-                  <Rocket className="w-4 h-4" />
+                <button 
+                  onClick={() => onPromote(item.id || item._id)}
+                  className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${item.isPromoted ? 'bg-brand-accent text-brand-primary' : 'bg-gray-50 text-gray-400 hover:text-black hover:bg-gray-100'}`} 
+                  title={item.isPromoted ? "Promoted!" : "Promote Asset"}
+                >
+                  <Rocket className={`w-4 h-4 ${item.isPromoted ? 'fill-brand-primary' : ''}`} />
                 </button>
-                <button className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-black transition-all" title="Edit">
+                <button 
+                  onClick={() => onEdit(item)}
+                  className="w-10 h-10 rounded-full bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-black transition-all" 
+                  title="Edit Asset"
+                >
                   <Pencil className="w-4 h-4" strokeWidth={2.5}/>
                 </button>
-                <button className="w-10 h-10 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 hover:text-red-500 transition-all border border-red-100" title="Delete">
+                <button 
+                  onClick={() => onDelete(item.id || item._id)}
+                  className="w-10 h-10 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center text-red-400 hover:text-red-500 transition-all border border-red-100" 
+                  title="Delete Asset"
+                >
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

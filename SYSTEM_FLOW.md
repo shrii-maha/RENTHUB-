@@ -6,8 +6,9 @@ This document serves as the comprehensive guide to how all functions and workflo
 The platform uses a custom JSON Web Token (JWT) based authentication system completely independent of third-party providers like Clerk.
 
 - **Registration & Login:** Users create accounts via `AuthModal.jsx`. The frontend calls `POST /api/auth/register` or `POST /api/auth/login`. Passwords are encrypted using `bcrypt` and a JWT token is generated and stored in the browser's `localStorage` (`rh_token`).
+- **Email Verification:** Upon registration, an automated verification email is sent via Nodemailer. The user remains in an `isVerified: false` state until they click the verification link, which calls `GET /api/auth/verify/:token`.
 - **Social Login:** Google and GitHub logins are handled via Passport.js on the backend. When a user authenticates, a JWT is generated and the user is redirected back to the frontend with the token in the URL (`?token=...`). The frontend `App.jsx` intercepts this and securely logs the user in.
-- **Forgot/Reset Password:** Users can request a password reset from the Auth Modal. A secure, time-limited token is generated and emailed via Nodemailer. Clicking the link opens `ResetPasswordModal.jsx` where the user securely sets a new password.
+- **Forgot/Reset Password:** Users can request a password reset from the Auth Modal. A secure, 32-character hex token is generated and emailed. Clicking the link opens `ResetPasswordModal.jsx` where the user securely sets a new password.
 
 ## 2. Listing Lifecycle & Admin Approvals
 To maintain marketplace quality, all new item listings must pass an Admin Approval workflow before becoming visible to buyers.
@@ -52,9 +53,10 @@ To empower sellers, RentHub provides visual data insights directly in the User D
 - **Visualization:** Using the `recharts` library, the "Earnings" tab renders a fully interactive `AreaChart` that plots the seller's net revenue over the trailing 30 days.
 
 ## 7. Security & Roles
-- **Role-Based Access:** The platform differentiates between standard `user` and `admin` roles. 
-- **Admin Email:** The admin user is defined by the `VITE_ADMIN_EMAIL` environment variable. Logging in with this email grants access to the Admin Panel (Approvals, User Directory, Payout Ledger, Site Analytics).
-- **Protected Routes:** Backend modifications (creating listings, modifying orders, updating profiles) require a valid `Bearer` token validated by the `verifyToken` middleware.
+- **Role-Based Access:** The platform differentiates between standard `user` and `admin` roles stored in the MongoDB User document.
+- **Identity Standard:** To ensure data integrity and security, the system exclusively uses MongoDB `_id` (ObjectIDs) for all internal relations. Email addresses are used strictly for authentication and communication, not for database lookups of orders or listings.
+- **Admin Identity:** The admin user is defined by the `VITE_ADMIN_EMAIL` environment variable. Logging in with this email grants access to the Admin Panel (Approvals, User Directory, Payout Ledger, Site Analytics).
+- **Protected Routes:** Backend modifications require a valid `Bearer` token validated by the `verifyToken` middleware.
 
 ## 8. Interactive Maps & Geocoding
 RentHub integrates an interactive mapping system to help users browse listings by proximity.

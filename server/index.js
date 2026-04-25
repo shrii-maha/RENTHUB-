@@ -33,13 +33,12 @@ import ChatSession from './models/ChatSession.js';
 import ChatMessage from './models/ChatMessage.js';
 import Notification from './models/Notification.js';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }) : null;
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Nodemailer Config
 const transporter = nodemailer.createTransport({
@@ -162,7 +161,10 @@ cloudinary.config({
 // Helpers
 const getCoordinates = async (location) => {
   try {
-    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`, {
+      headers: { 'User-Agent': 'RentHub-Marketplace/1.0' }
+    });
+    if (!res.ok) return null;
     const data = await res.json();
     if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
   } catch (err) { console.error('Geocoding failed:', err); }
@@ -360,6 +362,62 @@ app.get('/api/listings/seller/:id', verifyToken, async (req, res) => {
   try {
     const listings = await Listing.find({ sellerId: req.params.id }).sort({ createdAt: -1 });
     res.json(listings);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/listings/:id', verifyToken, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+    
+    // Authorization: Only seller or admin can update
+    if (listing.sellerId !== req.user._id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    // When a seller updates, reset status to pending for re-approval
+    // and reset promotion to avoid abuse
+    const updateData = { ...req.body, status: 'pending', isPromoted: false };
+    const updated = await Listing.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    
+    await ActivityLog.create({ actionType: 'system', message: 'Listing Updated', details: `"${listing.title}" edited and pending re-approval.` });
+    
+    res.json(updated);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.delete('/api/listings/:id', verifyToken, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+    if (listing.sellerId !== req.user._id && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    await Listing.findByIdAndDelete(req.params.id);
+    await ActivityLog.create({ actionType: 'system', message: 'Listing Deleted', details: `Listing ${listing.title} was removed by ${req.user.fullName}` });
+    res.json({ message: 'Listing deleted successfully' });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/api/listings/:id/promote', verifyToken, async (req, res) => {
+  try {
+    const listing = await Listing.findById(req.params.id);
+    if (!listing) return res.status(404).json({ error: 'Listing not found' });
+
+    if (listing.sellerId !== req.user._id) {
+      return res.status(403).json({ error: 'Only the seller can promote their listing' });
+    }
+
+    listing.isPromoted = !listing.isPromoted;
+    await listing.save();
+    
+    if (listing.isPromoted) {
+      await ActivityLog.create({ actionType: 'payout', message: 'Asset Promoted', details: `"${listing.title}" boosted to front page.` });
+    }
+    
+    res.json(listing);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

@@ -129,6 +129,8 @@ export default function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalPro
 
     const newItem = {
       ...formData,
+      image: formData.image || 'https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?w=800&q=80',
+      images: formData.images.length > 0 ? formData.images : ['https://images.unsplash.com/photo-1586769852836-bc069f19e1b6?w=800&q=80'],
       rating: 5.0,
       sellerId: user._id, // MongoDB user ID
       createdAt: new Date().toISOString(),

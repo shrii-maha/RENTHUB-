@@ -2,9 +2,14 @@ import { motion } from "motion/react";
 import { Star, MapPin, Heart, ArrowUpRight, MessageSquare } from "lucide-react";
 
 export default function FeaturedListings({ onProductSelect, listings, onOpenChat }) {
-  // Show the most recent 3 items as "featured" (Only approved ones)
+  // Show promoted items first, then most recent (Only approved ones)
   const featuredDisplay = listings
     .filter(item => item.status === 'approved')
+    .sort((a, b) => {
+      if (a.isPromoted && !b.isPromoted) return -1;
+      if (!a.isPromoted && b.isPromoted) return 1;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    })
     .slice(0, 3);
 
   if (listings.length === 0) return null;
