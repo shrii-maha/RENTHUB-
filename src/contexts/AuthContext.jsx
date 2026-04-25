@@ -16,15 +16,24 @@ export function AuthProvider({ children }) {
       fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${storedToken}` }
       })
-        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(errData => {
+              throw new Error(`Status ${res.status}: ${errData.error || 'Unknown backend error'}`);
+            }).catch(() => {
+              throw new Error(`Status ${res.status}: Invalid JSON from server (might be Vercel/Render timeout)`);
+            });
+          }
+          return res.json();
+        })
         .then(userData => {
           console.log('✅ Session restored for:', userData.email);
           setDbUser(userData);
           setToken(storedToken);
         })
         .catch((err) => {
-          console.error('❌ Session restoration failed. Token might be invalid or expired.', err);
-          alert("Login failed! The server rejected your token. This usually means the JWT_SECRET on Render.com doesn't match the one in your code. Please check your Render Environment Variables.");
+          console.error('❌ Session restoration failed.', err);
+          alert("Login failed! The server rejected your token. Error details: " + err.message);
           localStorage.removeItem('rh_token');
           setToken(null);
           setDbUser(null);
