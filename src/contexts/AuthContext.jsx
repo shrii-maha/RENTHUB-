@@ -24,6 +24,7 @@ export function AuthProvider({ children }) {
         })
         .catch((err) => {
           console.error('❌ Session restoration failed. Token might be invalid or expired.', err);
+          alert("Login failed! The server rejected your token. This usually means the JWT_SECRET on Render.com doesn't match the one in your code. Please check your Render Environment Variables.");
           localStorage.removeItem('rh_token');
           setToken(null);
           setDbUser(null);
