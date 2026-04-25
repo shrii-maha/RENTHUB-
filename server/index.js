@@ -35,7 +35,12 @@ import Notification from './models/Notification.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '..', '.env') });
+const dotenvResult = dotenv.config({ path: path.join(__dirname, '..', '.env') });
+if (dotenvResult.error) {
+  console.error('❌ CRITICAL: Failed to load .env file:', dotenvResult.error);
+} else {
+  console.log('✅ .env loaded successfully from', path.join(__dirname, '..', '.env'));
+}
 
 const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
 const genAI = process.env.GOOGLE_GENAI_API_KEY ? new GoogleGenAI({ apiKey: process.env.GOOGLE_GENAI_API_KEY }) : null;
@@ -172,6 +177,33 @@ const getCoordinates = async (location) => {
 };
 
 // --- API ROUTES ---
+app.get('/api/auth/me', verifyToken, async (req, res) => {
+  console.log('📡 GET /api/auth/me - User ID:', req.user?._id);
+  try {
+    const user = await User.findById(req.user._id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json(user);
+  } catch (err) { 
+    console.error('💥 /api/auth/me error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+app.put('/api/auth/profile', verifyToken, async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, req.body, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+app.post('/api/auth/avatar', verifyToken, multer({ storage: new CloudinaryStorage({ cloudinary, params: { folder: 'avatars' } }) }).single('avatar'), async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(req.user._id, { avatar: req.file.path }, { new: true }).select('-password');
+    res.json(user);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+
 
 // Auth
 app.post('/api/auth/register', 
@@ -386,6 +418,29 @@ app.put('/api/listings/:id', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
+app.get('/api/listings/seller/:id', verifyToken, async (req, res) => {
+  try {
+    const listings = await Listing.find({ sellerId: req.params.id }).sort({ createdAt: -1 });
+    res.json(listings);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Notifications
+app.get('/api/notifications/:userId', verifyToken, async (req, res) => {
+  try {
+    const notifications = await Notification.find({ userId: req.params.userId }).sort({ createdAt: -1 }).limit(20);
+    res.json(notifications);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/api/notifications/:id/read', verifyToken, async (req, res) => {
+  try {
+    const notification = await Notification.findByIdAndUpdate(req.params.id, { read: true }, { new: true });
+    res.json(notification);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+
 app.delete('/api/listings/:id', verifyToken, async (req, res) => {
   try {
     const listing = await Listing.findById(req.params.id);
@@ -474,6 +529,17 @@ app.patch('/api/orders/:id/ship', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
+app.patch('/api/orders/:id/delivered', verifyToken, async (req, res) => {
+  try {
+    const order = await Order.findByIdAndUpdate(req.params.id, { status: 'released' }, { new: true });
+    const listing = await Listing.findById(order.listingId);
+    await ActivityLog.create({ actionType: 'rental', message: 'Delivery Confirmed', details: `Buyer confirmed delivery for "${listing.title}". Funds released to seller.` });
+    await Notification.create({ userId: order.sellerId, type: 'order_delivered', message: `Buyer confirmed delivery! Funds released.` });
+    res.json(order);
+  } catch (err) { res.status(400).json({ error: err.message }); }
+});
+
+
 app.patch('/api/orders/:id/confirm-delivery', verifyToken, async (req, res) => {
   try {
     const order = await Order.findByIdAndUpdate(req.params.id, { status: 'released' }, { new: true });
@@ -500,11 +566,14 @@ app.get('/api/orders/buyer/:id', verifyToken, async (req, res) => {
 app.get('/api/admin/stats', verifyToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
   try {
-    const totalListings = await Listing.countDocuments();
+    const activeListings = await Listing.countDocuments({ status: 'approved' });
     const pendingApprovals = await Listing.countDocuments({ status: 'pending' });
     const totalOrders = await Order.countDocuments();
-    const totalEarnings = (await Order.find({ status: 'released' })).reduce((s, o) => s + o.amount, 0);
-    res.json({ totalListings, pendingApprovals, totalOrders, totalEarnings });
+    const activeRents = await Order.countDocuments({ status: { $in: ['escrow', 'shipped'] } });
+    const totalEarnings = (await Order.find({ status: { $in: ['released', 'paid'] } })).reduce((s, o) => s + o.amount, 0);
+    const totalEscrowVolume = (await Order.find({ status: 'escrow' })).reduce((s, o) => s + o.amount, 0);
+    
+    res.json({ activeListings, pendingApprovals, totalOrders, totalEarnings, activeRents, totalEscrowVolume });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -536,7 +605,46 @@ app.patch('/api/admin/listings/:id/status', verifyToken, async (req, res) => {
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
 
+app.get('/api/admin/users', verifyToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
+  try {
+    const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+    res.json(users);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/payouts', verifyToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
+  try {
+    const payouts = await Order.find({ status: { $in: ['released', 'payout_requested', 'paid'] } })
+      .populate('listingId')
+      .sort({ updatedAt: -1 });
+    res.json(payouts);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/admin/activity', verifyToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
+  try {
+    const logs = await ActivityLog.find({}).sort({ createdAt: -1 }).limit(50);
+    res.json(logs);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.patch('/api/admin/payouts/disburse/:sellerId', verifyToken, async (req, res) => {
+  if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
+  try {
+    const orders = await Order.updateMany(
+      { sellerId: req.params.sellerId, status: 'payout_requested' },
+      { status: 'paid' }
+    );
+    await ActivityLog.create({ actionType: 'system', message: 'Payout Disbursed', details: `Payouts released for seller ID: ${req.params.sellerId}` });
+    res.json({ message: 'Payouts disbursed successfully', count: orders.modifiedCount });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 // Chat
+
 app.post('/api/chat/sessions', verifyToken, async (req, res) => {
   try {
     const { sellerId, listingId } = req.body;
@@ -578,6 +686,12 @@ app.post('/api/chat', aiLimiter, async (req, res) => {
     const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: message }] }] });
     res.json({ text: result.response.text() });
   } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('💥 Unhandled Error:', err);
+  res.status(500).json({ error: 'Internal Server Error', details: err.message });
 });
 
 // Server Start

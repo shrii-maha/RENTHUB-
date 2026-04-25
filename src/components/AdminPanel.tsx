@@ -13,7 +13,7 @@ interface AdminPanelProps {
 }
 
 export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, token } = useAuth();
   const adminEmail = import.meta.env.VITE_ADMIN_EMAIL;
   const userEmail = user?.email;
   const [activeTab, setActiveTab] = useState<'overview' | 'approvals' | 'users' | 'payouts' | 'listings' | 'messages'>('overview');
