@@ -30,6 +30,8 @@ export function AuthProvider({ children }) {
           console.log('✅ Session restored for:', userData.email);
           setDbUser(userData);
           setToken(storedToken);
+          // Temporary success alert for debugging
+          alert("SUCCESS! You are logged in as " + userData.email);
         })
         .catch((err) => {
           console.error('❌ Session restoration failed.', err);
