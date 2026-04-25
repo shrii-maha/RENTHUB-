@@ -64,12 +64,31 @@ RentHub integrates an interactive mapping system to help users browse listings b
 - **Map View:** The Marketplace page features a view toggle. In "Map" mode, the platform renders an interactive map using `react-leaflet`.
 - **Contextual Popups:** Each map marker contains a preview of the listing, allowing users to see the price and image without leaving the map view.
 
-## 9. Technology Architecture (Pure JS MERN Stack)
+## 10. Admin Command Center & Stats
+The platform provides a powerful central hub for system administrators to monitor the marketplace's health in real-time.
+- **Dynamic Stats Dashboard:** The Admin Panel aggregates platform-wide metrics including:
+  - **Total Earnings:** Sum of all successfully released/paid orders.
+  - **Active Rents:** Current items in escrow or shipped status.
+  - **Total Escrow Volume:** Funds currently held by the platform awaiting delivery.
+  - **System Stability:** All numerical displays include zero-fallbacks to prevent UI crashes if backend data is temporarily unavailable.
+- **Audit Logs:** Every critical administrative action (approvals, status changes, user updates) is recorded in the `ActivityLogs` collection for system auditing.
+
+## 11. Stripe Payment Gateway
+RentHub integrates Stripe for secure, industry-standard credit card processing.
+- **Payment Intents:** When a buyer opens the `CheckoutModal`, the frontend requests a "Payment Intent" from the backend (`POST /api/create-payment-intent`).
+- **Currency Handling:** Payments are processed in **INR** with automatic conversion to paisa (cents) for Stripe's API compatibility.
+- **Security:** Credit card data never touches the RentHub servers. The Stripe SDK handles the PCI-compliant transmission of card details directly to Stripe.
+- **Escrow Integration:** Upon a successful `paymentIntent.status === "succeeded"`, the system automatically moves the order into the `escrow` state, notifying the seller to begin fulfillment.
+
+## 12. Technology Architecture (Pure JS MERN Stack)
 Per architectural design requirements, the platform is built using a **Pure JavaScript** stack for maximum simplicity and maintainability.
 - **Frontend:** React.js (Vite), Tailwind CSS, Framer Motion.
 - **Backend:** Node.js, Express.js.
 - **Database:** MongoDB Atlas (Mongoose).
 - **Security:** JWT (JSON Web Tokens), bcrypt.js, Passport.js.
 - **Storage:** Cloudinary (Images).
+- **Payments:** Stripe (API & Elements).
 - **Communication:** Socket.io (Real-time Chat).
 - **Maps:** Leaflet & React-Leaflet.
+- **AI Integration:** Google Gemini 1.5 Flash (via @google/genai).
+
