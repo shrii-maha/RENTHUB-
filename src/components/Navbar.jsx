@@ -178,6 +178,14 @@ export default function Navbar({ onOpenSell, onOpenAdmin, onNavigate, activeSect
                     <p className="font-bold text-sm text-black truncate">{user?.fullName}</p>
                     <p className="text-xs text-gray-400 truncate">{user?.email}</p>
                   </div>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setShowUserMenu(false); onOpenAdmin(); }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-sm font-medium text-brand-primary hover:bg-brand-accent/10 transition-colors"
+                    >
+                      <Shield className="w-4 h-4" /> Admin Console
+                    </button>
+                  )}
                   <button
                     onClick={() => { setShowUserMenu(false); onOpenDashboard(); }}
                     className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"

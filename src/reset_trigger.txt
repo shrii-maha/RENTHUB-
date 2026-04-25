@@ -1,0 +1,2 @@
+Triggering fresh Vercel deployment after successful local build verification.
+Timestamp: 2026-04-25 19:47:00
