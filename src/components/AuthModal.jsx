@@ -59,7 +59,8 @@ export default function AuthModal({ isOpen, onClose }) {
           if (!res.ok) throw new Error(data.error || 'Failed to send reset email');
           setSuccess('Reset link sent! Please check your email.');
         } else {
-          if (!res.ok) throw new Error(`Server error (${res.status}). Please ensure the backend is running.`);
+          const text = await res.text();
+          if (!res.ok) throw new Error(`Server error (${res.status}). Your backend might be down or unreachable.`);
           throw new Error('Unexpected response from server.');
         }
       }

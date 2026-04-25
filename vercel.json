@@ -9,9 +9,10 @@
       "destination": "https://renthub-backend-ni16.onrender.com/uploads/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api|uploads|assets|favicon.ico|logo.png|manifest.json).*)",
       "destination": "/index.html"
     }
   ]
 }
+
 
