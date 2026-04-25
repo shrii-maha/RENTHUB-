@@ -4,27 +4,33 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname  = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '..', '..', '.env') });
+
+const TARGET_EMAIL = 'renthub.marketplace@gmail.com';
 
 async function promote() {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
-    const User = mongoose.model('User', new mongoose.Schema({ email: String, role: String }));
-    
-    // Promote the requested email
-    const email = 'srimantamaharana886@gmail.com';
-    const result = await User.findOneAndUpdate({ email }, { role: 'admin' }, { new: true });
-    
-    if (result) {
-      console.log(`✅ SUCCESS: ${email} is now an ADMIN.`);
+    const User = mongoose.model('User', new mongoose.Schema(
+      { email: String, role: String, fullName: String },
+      { strict: false }
+    ));
+
+    const result = await User.findOneAndUpdate(
+      { email: TARGET_EMAIL },
+      { $set: { role: 'admin' } },
+      { new: true }
+    );
+
+    if (!result) {
+      console.error(`❌ No user found with email: ${TARGET_EMAIL}`);
     } else {
-      console.log(`❌ FAILED: User ${email} not found in database.`);
+      console.log(`✅ Successfully promoted ${result.email} (${result.fullName}) to role: ${result.role}`);
     }
-    
     process.exit(0);
   } catch (err) {
-    console.error(err);
+    console.error('💥 Error:', err.message);
     process.exit(1);
   }
 }
