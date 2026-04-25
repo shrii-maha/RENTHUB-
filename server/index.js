@@ -105,6 +105,28 @@ const generateJWT = (user) => {
   );
 };
 
+// Payments
+app.post('/api/create-payment-intent', async (req, res) => {
+  try {
+    const { amount } = req.body;
+    if (!stripe) {
+      console.error('❌ Stripe is not configured (missing STRIPE_SECRET_KEY)');
+      return res.status(500).json({ error: 'Payment gateway is not configured on the server.' });
+    }
+    
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100), // Stripe expects amount in cents/paisa
+      currency: 'inr',
+      metadata: { integration_check: 'accept_a_payment' },
+    });
+    
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    console.error('💥 Stripe Error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Passport Setup
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
