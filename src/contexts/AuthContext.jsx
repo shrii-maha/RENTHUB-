@@ -18,10 +18,12 @@ export function AuthProvider({ children }) {
       })
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(userData => {
+          console.log('✅ Session restored for:', userData.email);
           setDbUser(userData);
           setToken(storedToken);
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error('❌ Session restoration failed. Token might be invalid or expired.', err);
           localStorage.removeItem('rh_token');
           setToken(null);
           setDbUser(null);

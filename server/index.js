@@ -62,6 +62,8 @@ const io = new Server(httpServer, {
 const PORT = process.env.PORT || 3001;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
+app.set('trust proxy', 1); // Trust Render/Vercel proxy for secure cookies and redirect URIs
+
 // Middleware
 app.use(helmet());
 app.use(cors());
@@ -170,12 +172,14 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
 app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
 app.get('/api/auth/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
   const token = generateJWT(req.user);
+  console.log(`🚀 Google Login: ${req.user.email} | Redirecting to: ${FRONTEND_URL}`);
   res.redirect(`${FRONTEND_URL}/?token=${token}`);
 });
 
 app.get('/api/auth/github', passport.authenticate('github', { scope: ['user:email'], session: false }));
 app.get('/api/auth/github/callback', passport.authenticate('github', { session: false }), (req, res) => {
   const token = generateJWT(req.user);
+  console.log(`🚀 GitHub Login: ${req.user.email} | Redirecting to: ${FRONTEND_URL}`);
   res.redirect(`${FRONTEND_URL}/?token=${token}`);
 });
 

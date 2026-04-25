@@ -73,8 +73,13 @@ export default function App() {
     const verify_token = params.get('verify_token');
     
     if (token) {
+      console.log('🎟️ OAuth Token Received, saving to local storage...');
       localStorage.setItem('rh_token', token);
-      window.history.replaceState({}, document.title, window.location.pathname);
+      // Remove token from URL for security and to prevent loops
+      const url = new URL(window.location.href);
+      url.searchParams.delete('token');
+      window.history.replaceState({}, document.title, url.pathname);
+      // Force a re-fetch of the user data
       window.location.reload();
     }
     
