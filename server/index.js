@@ -60,6 +60,7 @@ const io = new Server(httpServer, {
   cors: { origin: "*", methods: ["GET", "POST"] }
 });
 const PORT = process.env.PORT || 3001;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // Middleware
 app.use(helmet());
@@ -165,7 +166,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
 }
 
 // OAuth Routes
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+
 app.get('/api/auth/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false }));
 app.get('/api/auth/google/callback', passport.authenticate('google', { session: false }), (req, res) => {
   const token = generateJWT(req.user);
@@ -592,10 +593,17 @@ app.get('/api/admin/stats', verifyToken, async (req, res) => {
     const pendingApprovals = await Listing.countDocuments({ status: 'pending' });
     const totalOrders = await Order.countDocuments();
     const activeRents = await Order.countDocuments({ status: { $in: ['escrow', 'shipped'] } });
-    const totalEarnings = (await Order.find({ status: { $in: ['released', 'paid'] } })).reduce((s, o) => s + o.amount, 0);
-    const totalEscrowVolume = (await Order.find({ status: 'escrow' })).reduce((s, o) => s + o.amount, 0);
+    const totalEarnings = (await Order.find({ status: { $in: ['released', 'paid'] } })).reduce((s, o) => s + (o.amount || 0), 0);
+    const totalEscrowVolume = (await Order.find({ status: 'escrow' })).reduce((s, o) => s + (o.amount || 0), 0);
     
-    res.json({ activeListings, pendingApprovals, totalOrders, totalEarnings, activeRents, totalEscrowVolume });
+    res.json({ 
+      activeListings: activeListings || 0, 
+      pendingApprovals: pendingApprovals || 0, 
+      totalOrders: totalOrders || 0, 
+      totalEarnings: totalEarnings || 0, 
+      activeRents: activeRents || 0, 
+      totalEscrowVolume: totalEscrowVolume || 0 
+    });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

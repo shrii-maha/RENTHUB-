@@ -309,20 +309,21 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
                   <div className="bg-gray-50/50 p-6 lg:p-6 rounded-3xl border border-gray-100">
                     <div className="text-[11px] text-gray-400 font-extrabold uppercase tracking-widest">Platform Earnings</div>
-                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">₹{stats.totalEarnings.toLocaleString()}</div>
+                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">₹{(stats.totalEarnings || 0).toLocaleString()}</div>
                     <div className="text-green-500 text-xs font-bold mt-2">↑ Dynamic Feed</div>
                   </div>
                   <div className="bg-gray-50/50 p-6 lg:p-6 rounded-3xl border border-gray-100">
                     <div className="text-[11px] text-gray-400 font-extrabold uppercase tracking-widest">Total Active Listings</div>
-                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">{stats.activeListings}</div>
+                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">{stats.activeListings || 0}</div>
                     <div className="text-blue-500 text-xs font-bold mt-2">Live on site</div>
                   </div>
                   <div className="bg-gray-50/50 p-6 lg:p-6 rounded-3xl border border-gray-100">
                     <div className="text-[11px] text-gray-400 font-extrabold uppercase tracking-widest">Active Rents</div>
-                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">{stats.activeRents}</div>
+                    <div className="text-3xl font-extrabold mt-3 tracking-tighter">{stats.activeRents || 0}</div>
                     <div className="text-brand-accent text-xs font-bold mt-2">In Progress</div>
                   </div>
                 </div>
+
 
                 {/* MAIN GRID */}
                 <div className="grid grid-cols-1 lg:grid-cols-[1.8fr_1fr] gap-8">
