@@ -765,10 +765,41 @@ app.post('/api/chat', aiLimiter, async (req, res) => {
   if (!genAI) return res.status(500).json({ error: 'AI not configured' });
   try {
     const { message } = req.body;
-    const model = genAI.models.get('gemini-1.5-flash');
-    const result = await model.generateContent({ contents: [{ role: 'user', parts: [{ text: message }] }] });
+    
+    // Fetch live marketplace context to make AI smarter
+    const listingCount = await Listing.countDocuments({ status: 'approved' });
+    const categories = await Listing.distinct('category');
+    
+    const systemInstruction = `You are the Official RentHub AI Assistant.
+RentHub is a premium peer-to-peer marketplace for renting and buying high-value assets.
+
+CURRENT MARKETPLACE CONTEXT:
+- Total Active Listings: ${listingCount}
+- Popular Categories: ${categories.join(', ')}
+
+CORE POLICIES:
+1. SECURITY: We use a secure Escrow system. Payments are held until the buyer confirms delivery.
+2. FEES: Sellers pay 5% commission on Sales and 15% on Rentals. Buyers pay a 5% service fee.
+3. INVOICES: Professional invoices are generated for every transaction and can be downloaded as PDFs.
+4. TRUST: All sellers are verified, and reviews are mandatory for transparency.
+
+GUIDELINES:
+- Be professional, helpful, and concise.
+- If asked about "how it works", explain the Escrow and Invoice system.
+- Always encourage users to check reviews before renting.
+- Never share user private data.`;
+
+    const model = genAI.getGenerativeModel({ 
+      model: 'gemini-1.5-flash',
+      systemInstruction: systemInstruction 
+    });
+
+    const result = await model.generateContent(message);
     res.json({ text: result.response.text() });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    console.error('AI Error:', err);
+    res.status(500).json({ error: 'AI Assistant is temporarily unavailable.' }); 
+  }
 });
 
 // Global Error Handler
