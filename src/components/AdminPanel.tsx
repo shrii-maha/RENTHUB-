@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import EditListingModal from "./EditListingModal";
 import ChatInbox from "./ChatInbox";
+import ReceiptModal from "./ReceiptModal";
 
 interface AdminPanelProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [editingListing, setEditingListing] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [receiptData, setReceiptData] = useState<any>(null);
 
   useEffect(() => {
     if (isAdmin && isOpen) {
@@ -643,12 +645,20 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 Released by Renter
                               </div>
                             </div>
-                            <button 
-                              onClick={() => releasePayout(payout._id)}
-                              className="w-full md:w-auto px-8 py-4 bg-black text-white hover:bg-gray-800 rounded-2xl font-extrabold text-xs transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
-                            >
-                              Release to Bank
-                            </button>
+                            <div className="flex flex-col gap-2">
+                               <button 
+                                 onClick={() => releasePayout(payout._id)}
+                                 className="w-full md:w-auto px-8 py-4 bg-black text-white hover:bg-gray-800 rounded-2xl font-extrabold text-xs transition-all shadow-md active:scale-95 cursor-pointer whitespace-nowrap"
+                               >
+                                 Release to Bank
+                               </button>
+                               <button 
+                                 onClick={() => setReceiptData({ product: payout.listingId, order: payout })}
+                                 className="w-full md:w-auto px-8 py-2.5 bg-gray-100 hover:bg-gray-200 text-black rounded-xl font-bold text-[10px] transition-all flex items-center justify-center gap-2"
+                               >
+                                 <Printer className="w-3.5 h-3.5" /> View Invoice
+                               </button>
+                             </div>
                           </div>
                         </div>
                       ))}
@@ -681,8 +691,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 </div>
                                 <div className="sm:text-right border-t sm:border-none border-white/10 pt-4 sm:pt-0">
                                     <div className="text-[10px] text-brand-accent font-extrabold uppercase tracking-widest drop-shadow-sm mb-1">Admin Profit</div>
-                                    <div className="text-xl font-black text-green-400 drop-shadow-sm">+ ₹{Math.floor(totalProfit).toLocaleString()}</div>
-                                    <div className="text-[9px] text-gray-500 uppercase font-bold tracking-widest mt-1">(Comm + Service Fee)</div>
+                                    <div className="text-xl font-black text-green-400 drop-shadow-sm mb-2">+ ₹{Math.floor(totalProfit).toLocaleString()}</div>
+                                    <button 
+                                      onClick={() => setReceiptData({ product: order.listingId, order })}
+                                      className="text-[9px] text-gray-500 hover:text-white uppercase font-bold tracking-widest flex items-center gap-1.5 ml-auto transition-colors"
+                                    >
+                                      <Printer className="w-3 h-3" /> Invoice
+                                    </button>
                                 </div>
                             </div>
                           );
@@ -798,12 +813,24 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         </motion.div>
         
         {/* EDIT MODAL */}
-        <EditListingModal 
-            isOpen={!!editingListing} 
-            onClose={() => setEditingListing(null)}
-            listing={editingListing}
-            onUpdate={updateListing}
-        />
+        {editingListing && (
+          <EditListingModal 
+            isOpen={true} 
+            onClose={() => setEditingListing(null)} 
+            listing={editingListing} 
+            onUpdate={updateListing} 
+          />
+        )}
+
+        {/* INVOICE MODAL */}
+        {receiptData && (
+          <ReceiptModal 
+            isOpen={true} 
+            onClose={() => setReceiptData(null)} 
+            product={receiptData.product} 
+            order={receiptData.order} 
+          />
+        )}
       </div>
     </AnimatePresence>
   );

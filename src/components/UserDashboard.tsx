@@ -370,7 +370,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                         </div>
                       </div>
 
-                      <TransactionHistory orders={orders} setOrders={setOrders} />
+                      <TransactionHistory orders={orders} setOrders={setOrders} onViewInvoice={(order) => setReceiptData({ product: order.listingId, order })} />
                     </motion.div>
                   )}
 
@@ -385,7 +385,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
                       <PurchasesGrid 
                         orders={buyerOrders} 
                         setBuyerOrders={setBuyerOrders} 
-                        onViewSource={(order: any) => setReceiptData({ product: order.listingId, orderId: order._id })} 
+                        onViewSource={(order: any) => setReceiptData({ product: order.listingId, order })} 
                         onOpenReview={(order: any) => {
                           setSelectedOrderForReview(order);
                           setIsReviewModalOpen(true);
@@ -415,7 +415,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
               isOpen={true} 
               onClose={() => setReceiptData(null)} 
               product={receiptData.product} 
-              orderId={receiptData.orderId} 
+              order={receiptData.order} 
             />
           )}
 
@@ -530,7 +530,7 @@ function EarningsSummary({ balance, pending, totalPaid, processing, onWithdraw, 
   );
 }
 
-function TransactionHistory({ orders, setOrders }: { orders: any[], setOrders: React.Dispatch<React.SetStateAction<any[]>> }) {
+function TransactionHistory({ orders, setOrders, onViewInvoice }: { orders: any[], setOrders: React.Dispatch<React.SetStateAction<any[]>>, onViewInvoice: (order: any) => void }) {
   if (!orders || orders.length === 0) {
     return (
       <div className="bg-white border md:border-dashed border-gray-100 rounded-[3rem] overflow-hidden p-16 text-center shadow-sm">
@@ -589,7 +589,13 @@ function TransactionHistory({ orders, setOrders }: { orders: any[], setOrders: R
                 <div className="flex items-center gap-10 md:pl-10 md:border-l border-gray-100">
                     <div className="text-right">
                        <span className="text-[9px] font-extrabold text-gray-400 uppercase tracking-widest block mb-0.5">Net Payout</span>
-                       <div className="text-2xl font-display font-bold italic text-black leading-none">₹{netPayout.toLocaleString()}</div>
+                       <div className="text-2xl font-display font-bold italic text-black leading-none mb-2">₹{netPayout.toLocaleString()}</div>
+                       <button 
+                         onClick={() => onViewInvoice(order)}
+                         className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 rounded-lg text-[9px] font-bold text-gray-400 hover:text-black transition-all ml-auto"
+                       >
+                         <Printer className="w-3 h-3" /> Invoice
+                       </button>
                     </div>
                 </div>
               </div>
@@ -754,7 +760,15 @@ function PurchasesGrid({ orders, setBuyerOrders, onViewSource, onOpenReview }: {
                     </span>
                   </div>
                   <div className="text-[10px] text-gray-400 font-medium tracking-wide mb-1">Ref: #{order._id.slice(-6).toUpperCase()} • {type}</div>
-                  <div className="font-bold text-black text-sm">₹{order.amount.toLocaleString()}.00</div>
+                  <div className="flex justify-between items-center">
+                    <div className="font-bold text-black text-sm">₹{order.amount.toLocaleString()}.00</div>
+                    <button 
+                      onClick={() => onViewSource && onViewSource(order)}
+                      className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 hover:bg-gray-100 rounded-lg text-[9px] font-bold text-gray-400 hover:text-black transition-all"
+                    >
+                      <Printer className="w-3 h-3" /> Invoice
+                    </button>
+                  </div>
               </div>
             </div>
             {/* Tracking info if shipped */}

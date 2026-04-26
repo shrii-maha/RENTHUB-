@@ -41,6 +41,11 @@ const OrderSchema = new mongoose.Schema({
   deliveryMethod: {
     type: String,
     default: 'shipping'
+  },
+  invoiceNumber: {
+    type: String,
+    unique: true,
+    sparse: true
   }
 }, {
   timestamps: true

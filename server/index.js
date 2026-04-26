@@ -207,6 +207,12 @@ const getCoordinates = async (location) => {
   return null;
 };
 
+const generateInvoiceNumber = () => {
+  const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  const random = crypto.randomBytes(3).toString('hex').toUpperCase();
+  return `RH-INV-${date}-${random}`;
+};
+
 // --- API ROUTES ---
 app.get('/api/auth/me', verifyToken, async (req, res) => {
   console.log('📡 GET /api/auth/me - User ID:', req.user?._id);
@@ -528,7 +534,8 @@ app.post('/api/orders', verifyToken, async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const order = new Order(req.body);
+    const orderData = { ...req.body, invoiceNumber: generateInvoiceNumber() };
+    const order = new Order(orderData);
     await order.save({ session });
 
     const listing = await Listing.findById(order.listingId).session(session);
@@ -537,11 +544,48 @@ app.post('/api/orders', verifyToken, async (req, res) => {
     listing.status = listing.type === 'Sale' ? 'sold' : 'rented';
     await listing.save({ session });
 
+    const seller = await User.findById(order.sellerId).session(session);
+    const sellerEmail = seller?.email || order.sellerId;
+
     await Notification.create([{ 
       userId: order.sellerId, 
       type: 'order_placed', 
       message: `New order for "${listing.title}". ₹${order.amount.toLocaleString()} in escrow.` 
     }], { session });
+
+    // Send Email to Buyer
+    await transporter.sendMail({
+      from: `"RentHub Marketplace" <${process.env.EMAIL_USER}>`,
+      to: order.buyerId,
+      subject: `Order Confirmed: ${listing.title}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #000;">Order Confirmation</h2>
+          <p>Thank you for your purchase! Your order for <strong>${listing.title}</strong> has been placed successfully.</p>
+          <p><strong>Invoice Number:</strong> ${order.invoiceNumber}</p>
+          <p><strong>Amount Paid:</strong> ₹${order.amount.toLocaleString()}</p>
+          <p>The funds are currently held in a secure escrow and will be released to the seller once you confirm delivery.</p>
+          <p>You can download your invoice from the "My Purchases" tab in your dashboard.</p>
+        </div>
+      `
+    });
+
+    // Send Email to Seller
+    await transporter.sendMail({
+      from: `"RentHub Marketplace" <${process.env.EMAIL_USER}>`,
+      to: sellerEmail,
+      subject: `New Sale: ${listing.title}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+          <h2 style="color: #000;">New Order Received!</h2>
+          <p>Congratulations! You have a new order for <strong>${listing.title}</strong>.</p>
+          <p><strong>Invoice Number:</strong> ${order.invoiceNumber}</p>
+          <p><strong>Net Earnings:</strong> ₹${order.amount.toLocaleString()}</p>
+          <p>Please prepare the item for shipping or delivery. Once the buyer confirms receipt, the funds will be released to your balance.</p>
+          <p>View details in your Seller Dashboard.</p>
+        </div>
+      `
+    });
 
     await session.commitTransaction();
     res.status(201).json(order);
