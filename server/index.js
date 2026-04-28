@@ -737,7 +737,7 @@ app.post('/api/chat/sessions', verifyToken, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.get('/api/chat/sessions/:id', verifyToken, async (req, res) => {
+app.get('/api/chat/sessions/user/:id', verifyToken, async (req, res) => {
   try {
     const sessions = await ChatSession.find({ participants: req.params.id }).sort({ updatedAt: -1 });
     res.json(sessions);

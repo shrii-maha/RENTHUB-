@@ -26,10 +26,12 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
     fetch(`/api/chat/messages/${sessionId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         setMessages(data);
-        setLoading(false);
         // Mark as read
         fetch(`/api/chat/messages/${sessionId}/read`, {
           method: 'PUT',
@@ -40,7 +42,8 @@ export default function ChatWindow({ sessionId, participantId, listingInfo }) {
           body: JSON.stringify({ userId: chatUserId })
         });
       })
-      .catch(console.error);
+      .catch(err => console.error("Error fetching messages:", err))
+      .finally(() => setLoading(false));
 
     // Listen for new messages
     const handleNewMessage = (message) => {

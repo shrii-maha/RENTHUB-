@@ -22,12 +22,19 @@ export default function ChatInbox({ variant = 'default' }) {
     fetch(`/api/chat/sessions/user/${chatUserId}`, {
       headers: { 'Authorization': `Bearer ${localStorage.getItem('rh_token')}` }
     })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         setSessions(data);
-        setLoading(false);
       })
-      .catch(console.error);
+      .catch(err => {
+        console.error("Error fetching sessions:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [chatUserId]);
 
   const handleSessionSelect = (session) => {
