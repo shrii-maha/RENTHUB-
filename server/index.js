@@ -391,6 +391,7 @@ app.put('/api/auth/profile', verifyToken, async (req, res) => {
       { fullName, phone, bio, address },
       { new: true }
     ).select('-password');
+    await Notification.create({ userId: req.user._id, type: 'profile_updated', message: 'Your profile has been updated successfully.' });
     res.json(user);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -417,6 +418,7 @@ app.post('/api/listings', verifyToken, async (req, res) => {
     const listing = new Listing(listingData);
     await listing.save();
     await ActivityLog.create({ actionType: 'system', message: 'New Product Listed', details: `${listing.title} is pending approval` });
+    await Notification.create({ userId: req.user._id, type: 'listing_created', message: `Your listing "${listing.title}" has been submitted and is pending approval.` });
     res.status(201).json(listing);
   } catch (err) { res.status(400).json({ error: err.message }); }
 });
@@ -451,6 +453,7 @@ app.put('/api/listings/:id', verifyToken, async (req, res) => {
     const updated = await Listing.findByIdAndUpdate(req.params.id, updateData, { new: true });
     
     await ActivityLog.create({ actionType: 'system', message: 'Listing Updated', details: `"${listing.title}" edited and pending re-approval.` });
+    await Notification.create({ userId: req.user._id, type: 'listing_updated', message: `Your listing "${listing.title}" has been updated and is pending re-approval.` });
     
     res.json(updated);
   } catch (err) { res.status(400).json({ error: err.message }); }
@@ -490,6 +493,7 @@ app.delete('/api/listings/:id', verifyToken, async (req, res) => {
 
     await Listing.findByIdAndDelete(req.params.id);
     await ActivityLog.create({ actionType: 'system', message: 'Listing Deleted', details: `Listing ${listing.title} was removed by ${req.user.fullName}` });
+    await Notification.create({ userId: req.user._id, type: 'listing_deleted', message: `Your listing "${listing.title}" was deleted successfully.` });
     res.json({ message: 'Listing deleted successfully' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -551,6 +555,10 @@ app.post('/api/orders', verifyToken, async (req, res) => {
       userId: order.sellerId, 
       type: 'order_placed', 
       message: `New order for "${listing.title}". ₹${order.amount.toLocaleString()} in escrow.` 
+    }, {
+      userId: order.buyerId,
+      type: 'order_placed',
+      message: `Your order for "${listing.title}" was placed successfully.`
     }], { session });
 
     // Send Email to Buyer
@@ -635,6 +643,20 @@ app.get('/api/orders/buyer/:id', verifyToken, async (req, res) => {
   try {
     const orders = await Order.find({ buyerId: req.params.id }).populate('listingId').sort({ createdAt: -1 });
     res.json(orders);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/payouts/request/:userId', verifyToken, async (req, res) => {
+  try {
+    const orders = await Order.updateMany(
+      { sellerId: req.params.userId, status: 'released' },
+      { status: 'payout_requested' }
+    );
+    if (orders.modifiedCount > 0) {
+      await Notification.create({ userId: req.params.userId, type: 'payout_requested', message: `You have successfully requested a payout for ${orders.modifiedCount} order(s).` });
+      await ActivityLog.create({ actionType: 'payout', message: 'Payout Requested', details: `Seller ${req.user.fullName} requested payout.` });
+    }
+    res.json({ success: true, count: orders.modifiedCount });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

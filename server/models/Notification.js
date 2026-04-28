@@ -8,7 +8,6 @@ const NotificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['listing_approved', 'order_placed', 'order_shipped', 'order_delivered', 'system'],
     required: true
   },
   message: {
