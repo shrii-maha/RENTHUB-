@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle, Star, MessageSquare } from "lucide-react";
+import { X, Shield, LayoutDashboard, CheckSquare, Users, Wallet, AlertCircle, RefreshCw, BarChart2, ShieldCheck, PlaySquare, AlertOctagon, Landmark, Package, Search, Trash2, Edit3, ExternalLink, CheckCircle, Star, MessageSquare, Printer } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useAuth } from "../contexts/AuthContext";
 import EditListingModal from "./EditListingModal";
@@ -49,12 +49,13 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
         fetch('/api/admin/payouts', { headers }),
         fetch('/api/admin/listings', { headers })
       ]);
-      setStats(await statsRes.json());
-      setPending(await pendingRes.json());
-      setActivity(await activityRes.json());
-      setUsersList(await usersRes.json());
-      setPayouts(await payoutsRes.json());
-      setAllListings(await listingsRes.json());
+      
+      if (statsRes.ok) setStats(await statsRes.json());
+      if (pendingRes.ok) setPending(await pendingRes.json());
+      if (activityRes.ok) setActivity(await activityRes.json());
+      if (usersRes.ok) setUsersList(await usersRes.json());
+      if (payoutsRes.ok) setPayouts(await payoutsRes.json());
+      if (listingsRes.ok) setAllListings(await listingsRes.json());
     } catch (err) {
       console.error("Failed to load admin data", err);
     } finally {
@@ -560,7 +561,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                                 {Object.entries(
                                     payouts.filter(p => p.status === 'payout_requested').reduce((acc: any, order) => {
                                         if (!acc[order.sellerId]) acc[order.sellerId] = { orders: [], total: 0 };
-                                        const basePrice = parseInt(order.listingId?.price?.replace(/[^\d]/g, '')) || 0;
+                                        const basePrice = parseInt((order.listingId?.price || "").toString().replace(/[^\d]/g, '')) || 0;
                                         const netPayout = order.listingId?.type === 'Sale' ? basePrice * 0.95 : basePrice * 0.85;
                                         acc[order.sellerId].orders.push(order);
                                         acc[order.sellerId].total += netPayout;
@@ -670,7 +671,7 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
                        {payouts.length === 0 ? (
                           <div className="text-sm text-gray-400 mx-auto py-10 font-bold italic">No platform profits recorded yet.</div>
                        ) : payouts.map((order) => {
-                          const basePrice = parseInt(order.listingId?.price?.replace(/[^\d]/g, '')) || 0;
+                          const basePrice = parseInt((order.listingId?.price || "").toString().replace(/[^\d]/g, '')) || 0;
                           const commPercent = order.listingId?.type === 'Sale' ? 0.05 : 0.15;
                           const adminCommission = basePrice * commPercent;
                           const serviceFee = basePrice * 0.05; // Buyer's 5% service fee

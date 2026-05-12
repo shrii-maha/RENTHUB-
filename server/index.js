@@ -721,7 +721,7 @@ app.get('/api/admin/users', verifyToken, async (req, res) => {
 app.get('/api/admin/payouts', verifyToken, async (req, res) => {
   if (req.user.role !== 'admin') return res.status(403).send('Access Denied');
   try {
-    const payouts = await Order.find({ status: { $in: ['released', 'payout_requested', 'paid'] } })
+    const payouts = await Order.find({ status: { $in: ['escrow', 'shipped', 'released', 'payout_requested', 'paid'] } })
       .populate('listingId')
       .sort({ updatedAt: -1 });
     res.json(payouts);
