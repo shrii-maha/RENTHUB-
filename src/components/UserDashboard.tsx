@@ -91,7 +91,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
       const total = dailyOrders.reduce((sum, order) => {
         const listing = order.listingId;
         const type = listing?.type || "Sale";
-        const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
+        const basePrice = parseInt((listing?.price || "").toString().replace(/[^\d]/g, '')) || 0;
         const feePercent = type === 'Sale' ? 5 : 15;
         const platformFee = Math.floor(basePrice * (feePercent / 100));
         return sum + (basePrice - platformFee);
@@ -119,7 +119,7 @@ export default function UserDashboard({ isOpen, onClose, listings, onOpenSell, i
   orders.forEach(order => {
     const listing = order.listingId;
     if (!listing) return;
-    const basePrice = parseInt(listing.price.replace(/[^\d]/g, '')) || 0;
+    const basePrice = parseInt((listing.price || "").toString().replace(/[^\d]/g, '')) || 0;
     const netPayout = listing.type === 'Sale' ? basePrice * 0.95 : basePrice * 0.85;
     
     if (order.status === 'escrow' || order.status === 'shipped') {
@@ -551,7 +551,7 @@ function TransactionHistory({ orders, setOrders, onViewInvoice }: { orders: any[
           const listing = order.listingId;
           const title = listing?.title || "Product Listing";
           const type = listing?.type || "Sale";
-          const basePrice = parseInt(listing?.price?.replace(/[^\d]/g, '')) || 0;
+          const basePrice = parseInt((listing?.price || "").toString().replace(/[^\d]/g, '')) || 0;
           const feePercent = type === 'Sale' ? 5 : 15;
           const platformFee = Math.floor(basePrice * (feePercent / 100));
           const netPayout = basePrice - platformFee;
